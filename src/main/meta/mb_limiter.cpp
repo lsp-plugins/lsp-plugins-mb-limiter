@@ -41,74 +41,69 @@ namespace lsp
         //-------------------------------------------------------------------------
         // Plugin metadata
 
-        // NOTE: Port identifiers should not be longer than 7 characters as it will overflow VST2 parameter name buffers
         static const port_t mb_limiter_mono_ports[] =
         {
             // Input and output audio ports
             PORTS_MONO_PLUGIN,
-
-            // Input controls
             BYPASS,
-            INT_CONTROL("d_in", "Delay in samples", U_SAMPLES, mb_limiter::SAMPLES),
-            DRY_GAIN(0.0f),
-            WET_GAIN(1.0f),
-            OUT_GAIN,
 
-            // Output controls
-            METER_MINMAX("d_out", "Delay time in milliseconds", U_MSEC, 0.0f, mb_limiter::DELAY_OUT_MAX_TIME),
-            METER_GAIN("min", "Input gain", GAIN_AMP_P_48_DB),
-            METER_GAIN("mout", "Output gain", GAIN_AMP_P_48_DB),
 
             PORTS_END
         };
 
-        // NOTE: Port identifiers should not be longer than 7 characters as it will overflow VST2 parameter name buffers
         static const port_t mb_limiter_stereo_ports[] =
         {
             // Input and output audio ports
             PORTS_STEREO_PLUGIN,
-
-            // Input controls
             BYPASS,
-            INT_CONTROL("d_in", "Delay in samples", U_SAMPLES, mb_limiter::SAMPLES),
-            DRY_GAIN(0.0f),
-            WET_GAIN(1.0f),
-            OUT_GAIN,
-
-            // Output controls
-            METER_MINMAX("d_out", "Delay time in milliseconds", U_MSEC, 0.0f, mb_limiter::DELAY_OUT_MAX_TIME),
-            METER_GAIN("min_l", "Input gain left",  GAIN_AMP_P_48_DB),
-            METER_GAIN("mout_l", "Output gain left",  GAIN_AMP_P_48_DB),
-            METER_GAIN("min_r", "Input gain right",  GAIN_AMP_P_48_DB),
-            METER_GAIN("mout_r", "Output gain right", GAIN_AMP_P_48_DB),
 
             PORTS_END
         };
 
-        static const int plugin_classes[]       = { C_DELAY, -1 };
-        static const int clap_features_mono[]   = { CF_AUDIO_EFFECT, CF_UTILITY, CF_MONO, -1 };
-        static const int clap_features_stereo[] = { CF_AUDIO_EFFECT, CF_UTILITY, CF_STEREO, -1 };
+        static const port_t sc_mb_limiter_mono_ports[] =
+        {
+            // Input and output audio ports
+            PORTS_MONO_PLUGIN,
+            PORTS_MONO_SIDECHAIN,
+            BYPASS,
+
+            PORTS_END
+        };
+
+        static const port_t sc_mb_limiter_stereo_ports[] =
+        {
+            // Input and output audio ports
+            PORTS_STEREO_PLUGIN,
+            PORTS_STEREO_SIDECHAIN,
+            BYPASS,
+
+            PORTS_END
+        };
+
+        static const int plugin_classes[]       = { C_LIMITER, -1 };
+        static const int clap_features_mono[]   = { CF_AUDIO_EFFECT, CF_LIMITER, CF_MONO, -1 };
+        static const int clap_features_stereo[] = { CF_AUDIO_EFFECT, CF_LIMITER, CF_STEREO, -1 };
 
         const meta::bundle_t mb_limiter_bundle =
         {
             "mb_limiter",
-            "Plugin Template",
-            B_UTILITIES,
+            "Multiband Limiter",
+            B_DYNAMICS,
             "", // TODO: provide ID of the video on YouTube
             "" // TODO: write plugin description, should be the same to the english version in 'bundles.json'
         };
 
         const plugin_t mb_limiter_mono =
         {
-            "Pluginschablone Mono",
-            "Plugin Template Mono",
-            "PS1M",
+            "Multi-band Begrenzer Mono",
+            "Multiband Limiter Mono",
+            "MBL1M",
             &developers::v_sadovnikov,
             "mb_limiter_mono",
             LSP_LV2_URI("mb_limiter_mono"),
             LSP_LV2UI_URI("mb_limiter_mono"),
-            "xxxx",         // TODO: fill valid VST2 ID (4 letters/digits)
-            1,              // TODO: fill valid LADSPA identifier (positive decimal integer)
+            "mblm",
+            LSP_LADSPA_MB_LIMITER_BASE + 0,
             LSP_LADSPA_URI("mb_limiter_mono"),
             LSP_CLAP_URI("mb_limiter_mono"),
             LSP_PLUGINS_MB_LIMITER_VERSION,
@@ -116,7 +111,7 @@ namespace lsp
             clap_features_mono,
             E_DUMP_STATE,
             mb_limiter_mono_ports,
-            "template/plugin.xml",
+            "dynamics/limiter/multiband/limiter.xml",
             NULL,
             mono_plugin_port_groups,
             &mb_limiter_bundle
@@ -124,15 +119,15 @@ namespace lsp
 
         const plugin_t mb_limiter_stereo =
         {
-            "Pluginschablone Stereo",
-            "Plugin Template Stereo",
-            "PS1S",
+            "Multi-band Begrenzer Stereo",
+            "Multiband Limiter Stereo",
+            "MBL1S",
             &developers::v_sadovnikov,
             "mb_limiter_stereo",
             LSP_LV2_URI("mb_limiter_stereo"),
             LSP_LV2UI_URI("mb_limiter_stereo"),
-            "yyyy",         // TODO: fill valid VST2 ID (4 letters/digits)
-            2,              // TODO: fill valid LADSPA identifier (positive decimal integer)
+            "mbls",
+            LSP_LADSPA_MB_LIMITER_BASE + 1,
             LSP_LADSPA_URI("mb_limiter_stereo"),
             LSP_CLAP_URI("mb_limiter_stereo"),
             LSP_PLUGINS_MB_LIMITER_VERSION,
@@ -140,11 +135,60 @@ namespace lsp
             clap_features_stereo,
             E_DUMP_STATE,
             mb_limiter_stereo_ports,
-            "template/plugin.xml",
+            "dynamics/limiter/multiband/limiter.xml",
             NULL,
             stereo_plugin_port_groups,
             &mb_limiter_bundle
         };
+
+        const plugin_t sc_mb_limiter_mono =
+        {
+            "Sidechain Multi-band Begrenzer Mono",
+            "Sidechain Multiband Limiter Mono",
+            "SCMBL1M",
+            &developers::v_sadovnikov,
+            "mb_limiter_mono",
+            LSP_LV2_URI("mb_limiter_mono"),
+            LSP_LV2UI_URI("mb_limiter_mono"),
+            "mblM",
+            LSP_LADSPA_MB_LIMITER_BASE + 2,
+            LSP_LADSPA_URI("mb_limiter_mono"),
+            LSP_CLAP_URI("mb_limiter_mono"),
+            LSP_PLUGINS_MB_LIMITER_VERSION,
+            plugin_classes,
+            clap_features_mono,
+            E_DUMP_STATE,
+            sc_mb_limiter_mono_ports,
+            "dynamics/limiter/multiband/limiter.xml",
+            NULL,
+            mono_plugin_port_groups,
+            &mb_limiter_bundle
+        };
+
+        const plugin_t sc_mb_limiter_stereo =
+        {
+            "Sidechain Multi-band Begrenzer Stereo",
+            "Sidechain Multiband Limiter Stereo",
+            "SCMBL1S",
+            &developers::v_sadovnikov,
+            "mb_limiter_stereo",
+            LSP_LV2_URI("mb_limiter_stereo"),
+            LSP_LV2UI_URI("mb_limiter_stereo"),
+            "mblS",
+            LSP_LADSPA_MB_LIMITER_BASE + 3,
+            LSP_LADSPA_URI("mb_limiter_stereo"),
+            LSP_CLAP_URI("mb_limiter_stereo"),
+            LSP_PLUGINS_MB_LIMITER_VERSION,
+            plugin_classes,
+            clap_features_stereo,
+            E_DUMP_STATE,
+            sc_mb_limiter_stereo_ports,
+            "dynamics/limiter/multiband/limiter.xml",
+            NULL,
+            stereo_plugin_port_groups,
+            &mb_limiter_bundle
+        };
+
     } /* namespace meta */
 } /* namespace lsp */
 

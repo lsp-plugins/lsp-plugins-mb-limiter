@@ -41,46 +41,8 @@ namespace lsp
                 mb_limiter (const mb_limiter &);
 
             protected:
-                enum mode_t
-                {
-                    CD_MONO,
-                    CD_STEREO,
-                    CD_X2_STEREO
-                };
-
-                typedef struct channel_t
-                {
-                    // DSP processing modules
-                    dspu::Delay         sLine;              // Delay line
-                    dspu::Bypass        sBypass;            // Bypass
-
-                    // Parameters
-                    ssize_t             nDelay;             // Actual delay of the signal
-                    float               fDryGain;           // Dry gain (unprocessed signal)
-                    float               fWetGain;           // Wet gain (processed signal)
-
-                    // Input ports
-                    plug::IPort        *pIn;                // Input port
-                    plug::IPort        *pOut;               // Output port
-                    plug::IPort        *pDelay;             // Delay (in samples)
-                    plug::IPort        *pDry;               // Dry control
-                    plug::IPort        *pWet;               // Wet control
-
-                    // Output ports
-                    plug::IPort        *pOutDelay;          // Output delay time
-                    plug::IPort        *pInLevel;           // Input signal level
-                    plug::IPort        *pOutLevel;          // Output signal level
-                } channel_t;
-
-            protected:
                 size_t              nChannels;          // Number of channels
-                channel_t          *vChannels;          // Delay channels
-                float              *vBuffer;            // Temporary buffer for audio processing
-
-                plug::IPort        *pBypass;            // Bypass
-                plug::IPort        *pGainOut;           // Output gain
-
-                uint8_t            *pData;              // Allocated data
+                bool                bSidechain;         // Sidechain switch is present
 
             public:
                 explicit mb_limiter(const meta::plugin_t *meta);
@@ -93,6 +55,7 @@ namespace lsp
                 virtual void        update_sample_rate(long sr) override;
                 virtual void        update_settings() override;
                 virtual void        process(size_t samples) override;
+                virtual bool        inline_display(plug::ICanvas *cv, size_t width, size_t height) override;
                 virtual void        dump(dspu::IStateDumper *v) const override;
         };
 

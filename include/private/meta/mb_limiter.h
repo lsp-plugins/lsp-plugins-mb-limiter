@@ -33,22 +33,13 @@ namespace lsp
     {
         typedef struct mb_limiter
         {
-            static constexpr float  SAMPLES_MIN         = 0.0f;
-            static constexpr float  SAMPLES_MAX         = 10000.0f;
-            static constexpr float  SAMPLES_DFL         = 0.0f;
-            static constexpr float  SAMPLES_STEP        = 1.0f;
-
-            static constexpr float  TIME_MIN            = 0.0f;
-            static constexpr float  TIME_MAX            = 1000.0f;
-            static constexpr float  TIME_DFL            = 0.0f;
-            static constexpr float  TIME_STEP           = 0.01f;
-
-            static constexpr float  DELAY_OUT_MAX_TIME  = 10000.0f;
         } mb_limiter;
 
         // Plugin type metadata
         extern const plugin_t mb_limiter_mono;
         extern const plugin_t mb_limiter_stereo;
+        extern const plugin_t sc_mb_limiter_mono;
+        extern const plugin_t sc_mb_limiter_stereo;
 
     } /* namespace meta */
 } /* namespace lsp */

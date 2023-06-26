@@ -33,6 +33,135 @@ namespace lsp
     {
         typedef struct mb_limiter
         {
+            static constexpr float  FREQ_MIN                = 10.0f;
+            static constexpr float  FREQ_MAX                = 20000.0f;
+            static constexpr float  FREQ_DFL                = 1000.0f;
+            static constexpr float  FREQ_STEP               = 0.002f;
+
+            static constexpr float  OUT_FREQ_MIN            = 0.0f;
+            static constexpr float  OUT_FREQ_MAX            = MAX_SAMPLE_RATE;
+            static constexpr float  OUT_FREQ_DFL            = 1000.0f;
+            static constexpr float  OUT_FREQ_STEP           = 0.002f;
+
+            static constexpr float  ZOOM_MIN                = GAIN_AMP_M_18_DB;
+            static constexpr float  ZOOM_MAX                = GAIN_AMP_0_DB;
+            static constexpr float  ZOOM_DFL                = GAIN_AMP_0_DB;
+            static constexpr float  ZOOM_STEP               = 0.0125f;
+
+            static constexpr float  LOOKAHEAD_MIN           = 0.1f;     // No lookahead [ms]
+            static constexpr float  LOOKAHEAD_MAX           = 20.0f;    // Maximum Lookahead [ms]
+            static constexpr float  LOOKAHEAD_DFL           = 5.0f;     // Default Lookahead [ms]
+            static constexpr float  LOOKAHEAD_STEP          = 0.005f;   // Lookahead step
+
+            static constexpr float  ATTACK_TIME_MIN         = 0.25f;
+            static constexpr float  ATTACK_TIME_MAX         = 20.0f;
+            static constexpr float  ATTACK_TIME_DFL         = 5.0f;
+            static constexpr float  ATTACK_TIME_STEP        = 0.0025f;
+
+            static constexpr float  RELEASE_TIME_MIN        = 0.25f;
+            static constexpr float  RELEASE_TIME_MAX        = 20.0f;
+            static constexpr float  RELEASE_TIME_DFL        = 5.0f;
+            static constexpr float  RELEASE_TIME_STEP       = 0.0025f;
+
+            static constexpr float  ALR_ATTACK_TIME_MIN     = 0.1f;
+            static constexpr float  ALR_ATTACK_TIME_MAX     = 200.0f;
+            static constexpr float  ALR_ATTACK_TIME_DFL     = 5.0f;
+            static constexpr float  ALR_ATTACK_TIME_STEP    = 0.0025f;
+
+            static constexpr float  ALR_RELEASE_TIME_MIN    = 10.0f;
+            static constexpr float  ALR_RELEASE_TIME_MAX    = 1000.0f;
+            static constexpr float  ALR_RELEASE_TIME_DFL    = 50.0f;
+            static constexpr float  ALR_RELEASE_TIME_STEP   = 0.0025f;
+
+            static constexpr float  THRESHOLD_MIN           = GAIN_AMP_M_48_DB;
+            static constexpr float  THRESHOLD_MAX           = GAIN_AMP_0_DB;
+            static constexpr float  THRESHOLD_DFL           = GAIN_AMP_0_DB;
+            static constexpr float  THRESHOLD_STEP          = 0.01f;
+
+            static constexpr float  KNEE_MIN                = GAIN_AMP_M_12_DB;
+            static constexpr float  KNEE_MAX                = GAIN_AMP_P_12_DB;
+            static constexpr float  KNEE_DFL                = GAIN_AMP_0_DB;
+            static constexpr float  KNEE_STEP               = 0.01f;
+
+            static constexpr float  LINKING_MIN             = 0;
+            static constexpr float  LINKING_MAX             = 100.0f;
+            static constexpr float  LINKING_DFL             = 100.0f;
+            static constexpr float  LINKING_STEP            = 0.01f;
+
+            enum oversampling_mode_t
+            {
+                OVS_NONE,
+
+                OVS_HALF_2X2,
+                OVS_HALF_2X3,
+                OVS_HALF_3X2,
+                OVS_HALF_3X3,
+                OVS_HALF_4X2,
+                OVS_HALF_4X3,
+                OVS_HALF_6X2,
+                OVS_HALF_6X3,
+                OVS_HALF_8X2,
+                OVS_HALF_8X3,
+
+                OVS_FULL_2X2,
+                OVS_FULL_2X3,
+                OVS_FULL_3X2,
+                OVS_FULL_3X3,
+                OVS_FULL_4X2,
+                OVS_FULL_4X3,
+                OVS_FULL_6X2,
+                OVS_FULL_6X3,
+                OVS_FULL_8X2,
+                OVS_FULL_8X3,
+
+                OVS_DEFAULT     = OVS_NONE
+            };
+
+            enum limiter_mode_t
+            {
+                LOM_HERM_THIN,
+                LOM_HERM_WIDE,
+                LOM_HERM_TAIL,
+                LOM_HERM_DUCK,
+
+                LOM_EXP_THIN,
+                LOM_EXP_WIDE,
+                LOM_EXP_TAIL,
+                LOM_EXP_DUCK,
+
+                LOM_LINE_THIN,
+                LOM_LINE_WIDE,
+                LOM_LINE_TAIL,
+                LOM_LINE_DUCK,
+
+                LOM_DEFAULT     = LOM_HERM_THIN
+            };
+
+            enum dithering_t
+            {
+                DITHER_NONE,
+                DITHER_7BIT,
+                DITHER_8BIT,
+                DITHER_11BIT,
+                DITHER_12BIT,
+                DITHER_15BIT,
+                DITHER_16BIT,
+                DITHER_23BIT,
+                DITHER_24BIT,
+
+                DITHER_DEFAULT  = DITHER_NONE
+            };
+
+            enum boost_t
+            {
+                FB_OFF,
+                FB_BT_3DB,
+                FB_MT_3DB,
+                FB_BT_6DB,
+                FB_MT_6DB,
+
+                FB_DEFAULT              = FB_BT_3DB
+            };
         } mb_limiter;
 
         // Plugin type metadata

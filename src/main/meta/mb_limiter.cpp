@@ -40,13 +40,159 @@ namespace lsp
     {
         //-------------------------------------------------------------------------
         // Plugin metadata
+        static port_item_t limiter_oper_modes[] =
+        {
+            { "Herm Thin",      "limiter.herm_thin"     },
+            { "Herm Wide",      "limiter.herm_wide"     },
+            { "Herm Tail",      "limiter.herm_tail"     },
+            { "Herm Duck",      "limiter.herm_duck"     },
+
+            { "Exp Thin",       "limiter.exp_thin"      },
+            { "Exp Wide",       "limiter.exp_wide"      },
+            { "Exp Tail",       "limiter.exp_tail"      },
+            { "Exp Duck",       "limiter.exp_duck"      },
+
+            { "Line Thin",      "limiter.line_thin"     },
+            { "Line Wide",      "limiter.line_wide"     },
+            { "Line Tail",      "limiter.line_tail"     },
+            { "Line Duck",      "limiter.line_duck"     },
+
+            { NULL, NULL }
+        };
+
+        static port_item_t limiter_ovs_modes[] =
+        {
+            { "None",           "oversampler.none"      },
+
+            { "Half x2(2L)",    "oversampler.half.2x2"  },
+            { "Half x2(3L)",    "oversampler.half.2x3"  },
+            { "Half x3(2L)",    "oversampler.half.3x2"  },
+            { "Half x3(3L)",    "oversampler.half.3x3"  },
+            { "Half x4(2L)",    "oversampler.half.4x2"  },
+            { "Half x4(3L)",    "oversampler.half.4x3"  },
+            { "Half x6(2L)",    "oversampler.half.6x2"  },
+            { "Half x6(3L)",    "oversampler.half.6x3"  },
+            { "Half x8(2L)",    "oversampler.half.8x2"  },
+            { "Half x8(3L)",    "oversampler.half.8x3"  },
+
+            { "Full x2(2L)",    "oversampler.full.2x2"  },
+            { "Full x2(3L)",    "oversampler.full.2x3"  },
+            { "Full x3(2L)",    "oversampler.full.3x2"  },
+            { "Full x3(3L)",    "oversampler.full.3x3"  },
+            { "Full x4(2L)",    "oversampler.full.4x2"  },
+            { "Full x4(3L)",    "oversampler.full.4x3"  },
+            { "Full x6(2L)",    "oversampler.full.6x2"  },
+            { "Full x6(3L)",    "oversampler.full.6x3"  },
+            { "Full x8(2L)",    "oversampler.full.8x2"  },
+            { "Full x8(3L)",    "oversampler.full.8x3"  },
+
+            { NULL, NULL }
+        };
+
+        static port_item_t limiter_dither_modes[] =
+        {
+            { "None",           "dither.none"           },
+            { "7bit",           "dither.bits.7"         },
+            { "8bit",           "dither.bits.8"         },
+            { "11bit",          "dither.bits.11"        },
+            { "12bit",          "dither.bits.12"        },
+            { "15bit",          "dither.bits.15"        },
+            { "16bit",          "dither.bits.16"        },
+            { "23bit",          "dither.bits.23"        },
+            { "24bit",          "dither.bits.24"        },
+            { NULL, NULL }
+        };
+
+        static const port_item_t limiter_sc_boost[] =
+        {
+            { "None",           "sidechain.boost.none" },
+            { "Pink BT",        "sidechain.boost.pink_bt" },
+            { "Pink MT",        "sidechain.boost.pink_mt" },
+            { "Brown BT",       "sidechain.boost.brown_bt" },
+            { "Brown MT",       "sidechain.boost.brown_mt" },
+            { NULL, NULL }
+        };
+
+        #define MBL_COMMON \
+            LOG_CONTROL("lk", "Lookahead", U_MSEC, mb_limiter::LOOKAHEAD), \
+            COMBO("ovs", "Oversampling", mb_limiter::OVS_DEFAULT, limiter_ovs_modes), \
+            COMBO("dith", "Dithering", mb_limiter::DITHER_DEFAULT, limiter_dither_modes), \
+            COMBO("envb", "Envelope boost", mb_limiter::FB_DEFAULT, limiter_sc_boost)
+
+        #define MBL_SC_COMMON \
+            MBL_COMMON, \
+            SWITCH("extsc", "External sidechain", 0.0f)
+
+        #define MBL_SPLIT(id, label, enable, freq) \
+            SWITCH("be" id, "Limiter band enable" label, enable), \
+            LOG_CONTROL_DFL("bsf" id, "Band split frequency" label, U_HZ, mb_limiter::FREQ, freq)
+
+        #define MBL_LIMITER(id, label) \
+            SWITCH("bb" id, "Gain boost" label, 1.0f), \
+            METER("fre" id, "Frequency range end" label, U_HZ, mb_limiter::OUT_FREQ), \
+            SWITCH("alr" id, "Automatic level regulation" label, 1.0f), \
+            LOG_CONTROL("aat" id, "Automatic level regulation attack time" label, U_MSEC, mb_limiter::ALR_ATTACK_TIME), \
+            LOG_CONTROL("art" id, "Automatic level regulation release time" label, U_MSEC, mb_limiter::ALR_RELEASE_TIME), \
+            LOG_CONTROL("akn" id, "Automatic level regulation knee" label, U_GAIN_AMP, mb_limiter::KNEE), \
+            COMBO("mode" id, "Operating mode" label, mb_limiter::LOM_DEFAULT, limiter_oper_modes), \
+            LOG_CONTROL("th" id, "Threshold" label, U_GAIN_AMP, mb_limiter::THRESHOLD), \
+            LOG_CONTROL("at", "Attack time", U_MSEC, mb_limiter::ATTACK_TIME), \
+            LOG_CONTROL("rt", "Release time", U_MSEC, mb_limiter::RELEASE_TIME)
+
+        #define MBL_BAND_COMMON(id, label) \
+            SWITCH("be" id, "Enable band processing" label, 1.0f), \
+            SWITCH("bs" id, "Solo band" label, 0.0f), \
+            SWITCH("bm" id, "Mute band" label, 0.0f), \
+            MBL_LIMITER(id, label)
+
+        #define MBL_BAND_METERS(id, label) \
+            METER_OUT_GAIN("rlm" id, "Reduction level meter" label, GAIN_AMP_P_72_DB)
+
+        #define MBL_BAND_MONO(id, label) \
+            MBL_BAND_COMMON(id, label), \
+            MBL_BAND_METERS(id, label)
+
+        #define MBL_BAND_STEREO(id, label) \
+            MBL_BAND_COMMON(id, label), \
+            MBL_BAND_METERS(id "l", label " Left"), \
+            MBL_BAND_METERS(id "r", label " Right")
+
+        #define MBL_METERS(id, label) \
+            METER_OUT_GAIN("ilm" id, "Input level meter" label, GAIN_AMP_0_DB), \
+            METER_OUT_GAIN("olm" id, "Output level meter" label, GAIN_AMP_0_DB)
+
+        #define MBL_METERS_MONO \
+            MBL_METERS("", "")
+
+        #define MBL_METERS_STEREO \
+            MBL_METERS("_l", " Left"), \
+            MBL_METERS("_r", " Right")
 
         static const port_t mb_limiter_mono_ports[] =
         {
             // Input and output audio ports
             PORTS_MONO_PLUGIN,
             BYPASS,
+            MBL_COMMON,
+            MBL_METERS_MONO,
+            MBL_LIMITER("", " Main"),
 
+            MBL_SPLIT("_1", " 1", 0.0f, 40.0f),
+            MBL_SPLIT("_2", " 2", 1.0f, 100.0f),
+            MBL_SPLIT("_3", " 3", 0.0f, 252.0f),
+            MBL_SPLIT("_4", " 4", 1.0f, 632.0f),
+            MBL_SPLIT("_5", " 5", 0.0f, 1587.0f),
+            MBL_SPLIT("_6", " 6", 1.0f, 3984.0f),
+            MBL_SPLIT("_7", " 7", 0.0f, 10000.0f),
+
+            MBL_BAND_MONO("_1", " 1"),
+            MBL_BAND_MONO("_2", " 2"),
+            MBL_BAND_MONO("_3", " 3"),
+            MBL_BAND_MONO("_4", " 4"),
+            MBL_BAND_MONO("_5", " 5"),
+            MBL_BAND_MONO("_6", " 6"),
+            MBL_BAND_MONO("_7", " 7"),
+            MBL_BAND_MONO("_8", " 8"),
 
             PORTS_END
         };
@@ -56,6 +202,26 @@ namespace lsp
             // Input and output audio ports
             PORTS_STEREO_PLUGIN,
             BYPASS,
+            MBL_COMMON,
+            MBL_METERS_STEREO,
+            MBL_LIMITER("", " Main"),
+
+            MBL_SPLIT("_1", " 1", 0.0f, 40.0f),
+            MBL_SPLIT("_2", " 2", 1.0f, 100.0f),
+            MBL_SPLIT("_3", " 3", 0.0f, 252.0f),
+            MBL_SPLIT("_4", " 4", 1.0f, 632.0f),
+            MBL_SPLIT("_5", " 5", 0.0f, 1587.0f),
+            MBL_SPLIT("_6", " 6", 1.0f, 3984.0f),
+            MBL_SPLIT("_7", " 7", 0.0f, 10000.0f),
+
+            MBL_BAND_STEREO("_1", " 1"),
+            MBL_BAND_STEREO("_2", " 2"),
+            MBL_BAND_STEREO("_3", " 3"),
+            MBL_BAND_STEREO("_4", " 4"),
+            MBL_BAND_STEREO("_5", " 5"),
+            MBL_BAND_STEREO("_6", " 6"),
+            MBL_BAND_STEREO("_7", " 7"),
+            MBL_BAND_STEREO("_8", " 8"),
 
             PORTS_END
         };
@@ -66,6 +232,26 @@ namespace lsp
             PORTS_MONO_PLUGIN,
             PORTS_MONO_SIDECHAIN,
             BYPASS,
+            MBL_SC_COMMON,
+            MBL_METERS_MONO,
+            MBL_LIMITER("", " Main"),
+
+            MBL_SPLIT("_1", " 1", 0.0f, 40.0f),
+            MBL_SPLIT("_2", " 2", 1.0f, 100.0f),
+            MBL_SPLIT("_3", " 3", 0.0f, 252.0f),
+            MBL_SPLIT("_4", " 4", 1.0f, 632.0f),
+            MBL_SPLIT("_5", " 5", 0.0f, 1587.0f),
+            MBL_SPLIT("_6", " 6", 1.0f, 3984.0f),
+            MBL_SPLIT("_7", " 7", 0.0f, 10000.0f),
+
+            MBL_BAND_MONO("_1", " 1"),
+            MBL_BAND_MONO("_2", " 2"),
+            MBL_BAND_MONO("_3", " 3"),
+            MBL_BAND_MONO("_4", " 4"),
+            MBL_BAND_MONO("_5", " 5"),
+            MBL_BAND_MONO("_6", " 6"),
+            MBL_BAND_MONO("_7", " 7"),
+            MBL_BAND_MONO("_8", " 8"),
 
             PORTS_END
         };
@@ -76,6 +262,26 @@ namespace lsp
             PORTS_STEREO_PLUGIN,
             PORTS_STEREO_SIDECHAIN,
             BYPASS,
+            MBL_SC_COMMON,
+            MBL_METERS_STEREO,
+            MBL_LIMITER("", " Main"),
+
+            MBL_SPLIT("_1", " 1", 0.0f, 40.0f),
+            MBL_SPLIT("_2", " 2", 1.0f, 100.0f),
+            MBL_SPLIT("_3", " 3", 0.0f, 252.0f),
+            MBL_SPLIT("_4", " 4", 1.0f, 632.0f),
+            MBL_SPLIT("_5", " 5", 0.0f, 1587.0f),
+            MBL_SPLIT("_6", " 6", 1.0f, 3984.0f),
+            MBL_SPLIT("_7", " 7", 0.0f, 10000.0f),
+
+            MBL_BAND_STEREO("_1", " 1"),
+            MBL_BAND_STEREO("_2", " 2"),
+            MBL_BAND_STEREO("_3", " 3"),
+            MBL_BAND_STEREO("_4", " 4"),
+            MBL_BAND_STEREO("_5", " 5"),
+            MBL_BAND_STEREO("_6", " 6"),
+            MBL_BAND_STEREO("_7", " 7"),
+            MBL_BAND_STEREO("_8", " 8"),
 
             PORTS_END
         };

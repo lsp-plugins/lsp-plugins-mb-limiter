@@ -157,9 +157,15 @@ namespace lsp
             MBL_BAND_METERS(id "l", label " Left"), \
             MBL_BAND_METERS(id "r", label " Right")
 
+        #define MBL_BAND_MESH(id, label) \
+            MESH("bfc" id, "Band filter chart" label, 2, mb_limiter::FFT_MESH_POINTS + 2)
+
         #define MBL_METERS(id, label) \
             METER_OUT_GAIN("ilm" id, "Input level meter" label, GAIN_AMP_0_DB), \
-            METER_OUT_GAIN("olm" id, "Output level meter" label, GAIN_AMP_0_DB)
+            METER_OUT_GAIN("olm" id, "Output level meter" label, GAIN_AMP_0_DB), \
+            MESH("ifg" id, "Input FFT graph" label, 2, mb_limiter::FFT_MESH_POINTS + 2), \
+            MESH("ofg" id, "Output FFT graph" label, 2, mb_limiter::FFT_MESH_POINTS), \
+            MESH("fg" id, "Filter graph" label, 2, mb_limiter::FFT_MESH_POINTS + 2)
 
         #define MBL_METERS_MONO \
             MBL_METERS("", "")
@@ -173,6 +179,8 @@ namespace lsp
             // Input and output audio ports
             PORTS_MONO_PLUGIN,
             BYPASS,
+            IN_GAIN,
+            OUT_GAIN,
             MBL_COMMON,
             MBL_METERS_MONO,
             MBL_LIMITER("", " Main"),
@@ -194,6 +202,15 @@ namespace lsp
             MBL_BAND_MONO("_7", " 7"),
             MBL_BAND_MONO("_8", " 8"),
 
+            MBL_BAND_MESH("_1", " 1"),
+            MBL_BAND_MESH("_2", " 2"),
+            MBL_BAND_MESH("_3", " 3"),
+            MBL_BAND_MESH("_4", " 4"),
+            MBL_BAND_MESH("_5", " 5"),
+            MBL_BAND_MESH("_6", " 6"),
+            MBL_BAND_MESH("_7", " 7"),
+            MBL_BAND_MESH("_8", " 8"),
+
             PORTS_END
         };
 
@@ -202,6 +219,8 @@ namespace lsp
             // Input and output audio ports
             PORTS_STEREO_PLUGIN,
             BYPASS,
+            IN_GAIN,
+            OUT_GAIN,
             MBL_COMMON,
             MBL_METERS_STEREO,
             MBL_LIMITER("", " Main"),
@@ -223,6 +242,14 @@ namespace lsp
             MBL_BAND_STEREO("_7", " 7"),
             MBL_BAND_STEREO("_8", " 8"),
 
+            MBL_BAND_MESH("_1", " 1"),
+            MBL_BAND_MESH("_2", " 2"),
+            MBL_BAND_MESH("_3", " 3"),
+            MBL_BAND_MESH("_4", " 4"),
+            MBL_BAND_MESH("_5", " 5"),
+            MBL_BAND_MESH("_6", " 6"),
+            MBL_BAND_MESH("_7", " 7"),
+            MBL_BAND_MESH("_8", " 8"),
             PORTS_END
         };
 
@@ -232,6 +259,8 @@ namespace lsp
             PORTS_MONO_PLUGIN,
             PORTS_MONO_SIDECHAIN,
             BYPASS,
+            IN_GAIN,
+            OUT_GAIN,
             MBL_SC_COMMON,
             MBL_METERS_MONO,
             MBL_LIMITER("", " Main"),
@@ -252,6 +281,15 @@ namespace lsp
             MBL_BAND_MONO("_6", " 6"),
             MBL_BAND_MONO("_7", " 7"),
             MBL_BAND_MONO("_8", " 8"),
+
+            MBL_BAND_MESH("_1", " 1"),
+            MBL_BAND_MESH("_2", " 2"),
+            MBL_BAND_MESH("_3", " 3"),
+            MBL_BAND_MESH("_4", " 4"),
+            MBL_BAND_MESH("_5", " 5"),
+            MBL_BAND_MESH("_6", " 6"),
+            MBL_BAND_MESH("_7", " 7"),
+            MBL_BAND_MESH("_8", " 8"),
 
             PORTS_END
         };
@@ -262,6 +300,8 @@ namespace lsp
             PORTS_STEREO_PLUGIN,
             PORTS_STEREO_SIDECHAIN,
             BYPASS,
+            IN_GAIN,
+            OUT_GAIN,
             MBL_SC_COMMON,
             MBL_METERS_STEREO,
             MBL_LIMITER("", " Main"),
@@ -282,6 +322,15 @@ namespace lsp
             MBL_BAND_STEREO("_6", " 6"),
             MBL_BAND_STEREO("_7", " 7"),
             MBL_BAND_STEREO("_8", " 8"),
+
+            MBL_BAND_MESH("_1", " 1"),
+            MBL_BAND_MESH("_2", " 2"),
+            MBL_BAND_MESH("_3", " 3"),
+            MBL_BAND_MESH("_4", " 4"),
+            MBL_BAND_MESH("_5", " 5"),
+            MBL_BAND_MESH("_6", " 6"),
+            MBL_BAND_MESH("_7", " 7"),
+            MBL_BAND_MESH("_8", " 8"),
 
             PORTS_END
         };

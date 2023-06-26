@@ -22,6 +22,7 @@
 #ifndef PRIVATE_META_MB_LIMITER_H_
 #define PRIVATE_META_MB_LIMITER_H_
 
+#include <lsp-plug.in/dsp-units/misc/windows.h>
 #include <lsp-plug.in/plug-fw/meta/types.h>
 #include <lsp-plug.in/plug-fw/const.h>
 
@@ -87,6 +88,18 @@ namespace lsp
             static constexpr float  LINKING_MAX             = 100.0f;
             static constexpr float  LINKING_DFL             = 100.0f;
             static constexpr float  LINKING_STEP            = 0.01f;
+
+            static constexpr size_t FFT_MESH_POINTS         = 640;
+            static constexpr float  REACT_TIME_MIN          = 0.000;
+            static constexpr float  REACT_TIME_MAX          = 1.000;
+            static constexpr float  REACT_TIME_DFL          = 0.200;
+            static constexpr float  REACT_TIME_STEP         = 0.001;
+
+            static constexpr size_t FFT_RANK                = 13;
+            static constexpr size_t FFT_ITEMS               = 1 << FFT_RANK;
+            static constexpr size_t MESH_POINTS             = 640;
+            static constexpr size_t FILTER_MESH_POINTS      = FFT_MESH_POINTS + 2;
+            static constexpr size_t FFT_WINDOW              = dspu::windows::HANN;
 
             enum oversampling_mode_t
             {

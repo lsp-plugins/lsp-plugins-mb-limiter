@@ -31,10 +31,12 @@ namespace lsp
         static const meta::plugin_t *plugin_uis[] =
         {
             &meta::mb_limiter_mono,
-            &meta::mb_limiter_stereo
+            &meta::mb_limiter_stereo,
+            &meta::sc_mb_limiter_mono,
+            &meta::sc_mb_limiter_stereo
         };
 
-        static ui::Factory factory(plugin_uis, 2);
+        static ui::Factory factory(plugin_uis, 4);
 
     } /* namespace plugui */
 } /* namespace lsp */

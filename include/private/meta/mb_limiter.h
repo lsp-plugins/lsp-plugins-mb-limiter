@@ -89,7 +89,6 @@ namespace lsp
             static constexpr float  LINKING_DFL             = 100.0f;
             static constexpr float  LINKING_STEP            = 0.01f;
 
-            static constexpr size_t FFT_MESH_POINTS         = 640;
             static constexpr float  REACT_TIME_MIN          = 0.000;
             static constexpr float  REACT_TIME_MAX          = 1.000;
             static constexpr float  REACT_TIME_DFL          = 0.200;
@@ -97,9 +96,10 @@ namespace lsp
 
             static constexpr size_t FFT_RANK                = 13;
             static constexpr size_t FFT_ITEMS               = 1 << FFT_RANK;
-            static constexpr size_t MESH_POINTS             = 640;
-            static constexpr size_t FILTER_MESH_POINTS      = FFT_MESH_POINTS + 2;
+            static constexpr size_t FFT_MESH_POINTS         = 640;
             static constexpr size_t FFT_WINDOW              = dspu::windows::HANN;
+            static constexpr size_t BANDS_MAX               = 8;
+            static constexpr size_t BANDS_DFL               = 4;
 
             enum oversampling_mode_t
             {

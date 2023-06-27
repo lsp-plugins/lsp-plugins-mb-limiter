@@ -114,6 +114,9 @@ namespace lsp
         };
 
         #define MBL_COMMON \
+            BYPASS, \
+            IN_GAIN, \
+            OUT_GAIN, \
             LOG_CONTROL("lk", "Lookahead", U_MSEC, mb_limiter::LOOKAHEAD), \
             COMBO("ovs", "Oversampling", mb_limiter::OVS_DEFAULT, limiter_ovs_modes), \
             COMBO("dith", "Dithering", mb_limiter::DITHER_DEFAULT, limiter_dither_modes), \
@@ -124,43 +127,56 @@ namespace lsp
             SWITCH("extsc", "External sidechain", 0.0f)
 
         #define MBL_SPLIT(id, label, enable, freq) \
-            SWITCH("be" id, "Limiter band enable" label, enable), \
-            LOG_CONTROL_DFL("bsf" id, "Band split frequency" label, U_HZ, mb_limiter::FREQ, freq)
+            SWITCH("se" id, "Limiter band enable" label, enable), \
+            LOG_CONTROL_DFL("sf" id, "Band split frequency" label, U_HZ, mb_limiter::FREQ, freq)
 
         #define MBL_LIMITER(id, label) \
-            SWITCH("bb" id, "Gain boost" label, 1.0f), \
-            METER("fre" id, "Frequency range end" label, U_HZ, mb_limiter::OUT_FREQ), \
+            SWITCH("on" id, "Limiter enabled" label, 1.0f), \
             SWITCH("alr" id, "Automatic level regulation" label, 1.0f), \
             LOG_CONTROL("aat" id, "Automatic level regulation attack time" label, U_MSEC, mb_limiter::ALR_ATTACK_TIME), \
             LOG_CONTROL("art" id, "Automatic level regulation release time" label, U_MSEC, mb_limiter::ALR_RELEASE_TIME), \
             LOG_CONTROL("akn" id, "Automatic level regulation knee" label, U_GAIN_AMP, mb_limiter::KNEE), \
             COMBO("mode" id, "Operating mode" label, mb_limiter::LOM_DEFAULT, limiter_oper_modes), \
             LOG_CONTROL("th" id, "Threshold" label, U_GAIN_AMP, mb_limiter::THRESHOLD), \
-            LOG_CONTROL("at", "Attack time", U_MSEC, mb_limiter::ATTACK_TIME), \
-            LOG_CONTROL("rt", "Release time", U_MSEC, mb_limiter::RELEASE_TIME)
+            SWITCH("gb" id, "Gain boost" label, 1.0f), \
+            LOG_CONTROL("at" id, "Attack time" label, U_MSEC, mb_limiter::ATTACK_TIME), \
+            LOG_CONTROL("rt" id, "Release time" label, U_MSEC, mb_limiter::RELEASE_TIME)
+
+        #define MBL_LIMITER_METERS(id, label) \
+            METER_OUT_GAIN("rlm" id, "Reduction level meter" label, GAIN_AMP_0_DB)
+
+        #define MBL_MAIN_LIMITER_MONO \
+            MBL_LIMITER("", " Main"), \
+            MBL_LIMITER_METERS("", " Main")
+
+        #define MBL_MAIN_LIMITER_STEREO \
+            MBL_LIMITER("", " Main"), \
+            LOG_CONTROL("slink", "Stereo linking Main", U_PERCENT, mb_limiter::LINKING), \
+            MBL_LIMITER_METERS("_l", " Main Left"), \
+            MBL_LIMITER_METERS("_r", " Main Right")
 
         #define MBL_BAND_COMMON(id, label) \
-            SWITCH("be" id, "Enable band processing" label, 1.0f), \
+            METER("bfe" id, "Frequency range end" label, U_HZ, mb_limiter::OUT_FREQ), \
             SWITCH("bs" id, "Solo band" label, 0.0f), \
             SWITCH("bm" id, "Mute band" label, 0.0f), \
+            AMP_GAIN100("bpa" id, "Band preamp" label, GAIN_AMP_0_DB), \
+            AMP_GAIN100("bmk" id, "Band makeup" label, GAIN_AMP_0_DB), \
+            MESH("bfc" id, "Band filter chart" label, 2, mb_limiter::FFT_MESH_POINTS + 2), \
             MBL_LIMITER(id, label)
-
-        #define MBL_BAND_METERS(id, label) \
-            METER_OUT_GAIN("rlm" id, "Reduction level meter" label, GAIN_AMP_P_72_DB)
 
         #define MBL_BAND_MONO(id, label) \
             MBL_BAND_COMMON(id, label), \
-            MBL_BAND_METERS(id, label)
+            MBL_LIMITER_METERS(id, label)
 
         #define MBL_BAND_STEREO(id, label) \
             MBL_BAND_COMMON(id, label), \
-            MBL_BAND_METERS(id "l", label " Left"), \
-            MBL_BAND_METERS(id "r", label " Right")
-
-        #define MBL_BAND_MESH(id, label) \
-            MESH("bfc" id, "Band filter chart" label, 2, mb_limiter::FFT_MESH_POINTS + 2)
+            LOG_CONTROL("bsl" id, "Band stereo linking" label, U_PERCENT, mb_limiter::LINKING), \
+            MBL_LIMITER_METERS(id "l", label " Left"), \
+            MBL_LIMITER_METERS(id "r", label " Right")
 
         #define MBL_METERS(id, label) \
+            SWITCH("ife" id, "Input FFT enable" label, 1.0f), \
+            SWITCH("ofe" id, "Output FFT enable" label, 1.0f), \
             METER_OUT_GAIN("ilm" id, "Input level meter" label, GAIN_AMP_0_DB), \
             METER_OUT_GAIN("olm" id, "Output level meter" label, GAIN_AMP_0_DB), \
             MESH("ifg" id, "Input FFT graph" label, 2, mb_limiter::FFT_MESH_POINTS + 2), \
@@ -178,12 +194,9 @@ namespace lsp
         {
             // Input and output audio ports
             PORTS_MONO_PLUGIN,
-            BYPASS,
-            IN_GAIN,
-            OUT_GAIN,
             MBL_COMMON,
             MBL_METERS_MONO,
-            MBL_LIMITER("", " Main"),
+            MBL_MAIN_LIMITER_MONO,
 
             MBL_SPLIT("_1", " 1", 0.0f, 40.0f),
             MBL_SPLIT("_2", " 2", 1.0f, 100.0f),
@@ -202,15 +215,6 @@ namespace lsp
             MBL_BAND_MONO("_7", " 7"),
             MBL_BAND_MONO("_8", " 8"),
 
-            MBL_BAND_MESH("_1", " 1"),
-            MBL_BAND_MESH("_2", " 2"),
-            MBL_BAND_MESH("_3", " 3"),
-            MBL_BAND_MESH("_4", " 4"),
-            MBL_BAND_MESH("_5", " 5"),
-            MBL_BAND_MESH("_6", " 6"),
-            MBL_BAND_MESH("_7", " 7"),
-            MBL_BAND_MESH("_8", " 8"),
-
             PORTS_END
         };
 
@@ -218,12 +222,9 @@ namespace lsp
         {
             // Input and output audio ports
             PORTS_STEREO_PLUGIN,
-            BYPASS,
-            IN_GAIN,
-            OUT_GAIN,
             MBL_COMMON,
             MBL_METERS_STEREO,
-            MBL_LIMITER("", " Main"),
+            MBL_MAIN_LIMITER_STEREO,
 
             MBL_SPLIT("_1", " 1", 0.0f, 40.0f),
             MBL_SPLIT("_2", " 2", 1.0f, 100.0f),
@@ -242,14 +243,6 @@ namespace lsp
             MBL_BAND_STEREO("_7", " 7"),
             MBL_BAND_STEREO("_8", " 8"),
 
-            MBL_BAND_MESH("_1", " 1"),
-            MBL_BAND_MESH("_2", " 2"),
-            MBL_BAND_MESH("_3", " 3"),
-            MBL_BAND_MESH("_4", " 4"),
-            MBL_BAND_MESH("_5", " 5"),
-            MBL_BAND_MESH("_6", " 6"),
-            MBL_BAND_MESH("_7", " 7"),
-            MBL_BAND_MESH("_8", " 8"),
             PORTS_END
         };
 
@@ -258,12 +251,9 @@ namespace lsp
             // Input and output audio ports
             PORTS_MONO_PLUGIN,
             PORTS_MONO_SIDECHAIN,
-            BYPASS,
-            IN_GAIN,
-            OUT_GAIN,
             MBL_SC_COMMON,
             MBL_METERS_MONO,
-            MBL_LIMITER("", " Main"),
+            MBL_MAIN_LIMITER_MONO,
 
             MBL_SPLIT("_1", " 1", 0.0f, 40.0f),
             MBL_SPLIT("_2", " 2", 1.0f, 100.0f),
@@ -281,15 +271,6 @@ namespace lsp
             MBL_BAND_MONO("_6", " 6"),
             MBL_BAND_MONO("_7", " 7"),
             MBL_BAND_MONO("_8", " 8"),
-
-            MBL_BAND_MESH("_1", " 1"),
-            MBL_BAND_MESH("_2", " 2"),
-            MBL_BAND_MESH("_3", " 3"),
-            MBL_BAND_MESH("_4", " 4"),
-            MBL_BAND_MESH("_5", " 5"),
-            MBL_BAND_MESH("_6", " 6"),
-            MBL_BAND_MESH("_7", " 7"),
-            MBL_BAND_MESH("_8", " 8"),
 
             PORTS_END
         };
@@ -299,12 +280,9 @@ namespace lsp
             // Input and output audio ports
             PORTS_STEREO_PLUGIN,
             PORTS_STEREO_SIDECHAIN,
-            BYPASS,
-            IN_GAIN,
-            OUT_GAIN,
             MBL_SC_COMMON,
             MBL_METERS_STEREO,
-            MBL_LIMITER("", " Main"),
+            MBL_MAIN_LIMITER_STEREO,
 
             MBL_SPLIT("_1", " 1", 0.0f, 40.0f),
             MBL_SPLIT("_2", " 2", 1.0f, 100.0f),
@@ -322,15 +300,6 @@ namespace lsp
             MBL_BAND_STEREO("_6", " 6"),
             MBL_BAND_STEREO("_7", " 7"),
             MBL_BAND_STEREO("_8", " 8"),
-
-            MBL_BAND_MESH("_1", " 1"),
-            MBL_BAND_MESH("_2", " 2"),
-            MBL_BAND_MESH("_3", " 3"),
-            MBL_BAND_MESH("_4", " 4"),
-            MBL_BAND_MESH("_5", " 5"),
-            MBL_BAND_MESH("_6", " 6"),
-            MBL_BAND_MESH("_7", " 7"),
-            MBL_BAND_MESH("_8", " 8"),
 
             PORTS_END
         };
@@ -364,7 +333,7 @@ namespace lsp
             LSP_PLUGINS_MB_LIMITER_VERSION,
             plugin_classes,
             clap_features_mono,
-            E_DUMP_STATE,
+            E_DUMP_STATE | E_INLINE_DISPLAY,
             mb_limiter_mono_ports,
             "dynamics/limiter/multiband/limiter.xml",
             NULL,
@@ -388,7 +357,7 @@ namespace lsp
             LSP_PLUGINS_MB_LIMITER_VERSION,
             plugin_classes,
             clap_features_stereo,
-            E_DUMP_STATE,
+            E_DUMP_STATE | E_INLINE_DISPLAY,
             mb_limiter_stereo_ports,
             "dynamics/limiter/multiband/limiter.xml",
             NULL,
@@ -402,17 +371,17 @@ namespace lsp
             "Sidechain Multiband Limiter Mono",
             "SCMBL1M",
             &developers::v_sadovnikov,
-            "mb_limiter_mono",
-            LSP_LV2_URI("mb_limiter_mono"),
-            LSP_LV2UI_URI("mb_limiter_mono"),
+            "sc_mb_limiter_mono",
+            LSP_LV2_URI("sc_mb_limiter_mono"),
+            LSP_LV2UI_URI("sc_mb_limiter_mono"),
             "mblM",
             LSP_LADSPA_MB_LIMITER_BASE + 2,
-            LSP_LADSPA_URI("mb_limiter_mono"),
-            LSP_CLAP_URI("mb_limiter_mono"),
+            LSP_LADSPA_URI("sc_mb_limiter_mono"),
+            LSP_CLAP_URI("sc_mb_limiter_mono"),
             LSP_PLUGINS_MB_LIMITER_VERSION,
             plugin_classes,
             clap_features_mono,
-            E_DUMP_STATE,
+            E_DUMP_STATE | E_INLINE_DISPLAY,
             sc_mb_limiter_mono_ports,
             "dynamics/limiter/multiband/limiter.xml",
             NULL,
@@ -426,17 +395,17 @@ namespace lsp
             "Sidechain Multiband Limiter Stereo",
             "SCMBL1S",
             &developers::v_sadovnikov,
-            "mb_limiter_stereo",
-            LSP_LV2_URI("mb_limiter_stereo"),
-            LSP_LV2UI_URI("mb_limiter_stereo"),
+            "sc_mb_limiter_stereo",
+            LSP_LV2_URI("sc_mb_limiter_stereo"),
+            LSP_LV2UI_URI("sc_mb_limiter_stereo"),
             "mblS",
             LSP_LADSPA_MB_LIMITER_BASE + 3,
-            LSP_LADSPA_URI("mb_limiter_stereo"),
-            LSP_CLAP_URI("mb_limiter_stereo"),
+            LSP_LADSPA_URI("sc_mb_limiter_stereo"),
+            LSP_CLAP_URI("sc_mb_limiter_stereo"),
             LSP_PLUGINS_MB_LIMITER_VERSION,
             plugin_classes,
             clap_features_stereo,
-            E_DUMP_STATE,
+            E_DUMP_STATE | E_INLINE_DISPLAY,
             sc_mb_limiter_stereo_ports,
             "dynamics/limiter/multiband/limiter.xml",
             NULL,

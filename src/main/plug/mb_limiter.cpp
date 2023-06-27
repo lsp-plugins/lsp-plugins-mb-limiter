@@ -408,9 +408,9 @@ namespace lsp
                     c->sDryDelay.destroy();
 
                     // Destroy bands
-                    for (size_t i=0; i<meta::mb_limiter::BANDS_MAX; ++i)
+                    for (size_t j=0; j<meta::mb_limiter::BANDS_MAX; ++j)
                     {
-                        band_t *b   = c->vBands;
+                        band_t *b   = &c->vBands[j];
 
                         b->sLimit.destroy();
                         b->sBlink.destroy();

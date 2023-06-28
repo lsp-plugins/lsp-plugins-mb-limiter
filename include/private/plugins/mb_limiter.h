@@ -154,9 +154,13 @@ namespace lsp
                 plug::IPort            *pInGain;            // Input gain
                 plug::IPort            *pOutGain;           // Output gain
                 plug::IPort            *pLookahead;         // Lookahead time
+                plug::IPort            *pMode;              // Mode
                 plug::IPort            *pOversampling;      // Oversampling
                 plug::IPort            *pDithering;         // Dithering
                 plug::IPort            *pEnvBoost;          // Envelope boost
+                plug::IPort            *pZoom;              // Zoom
+                plug::IPort            *pReactivity;        // Reactivity
+                plug::IPort            *pShift;             // Shift gain
                 plug::IPort            *pExtSc;             // External sidechain
 
                 uint8_t                *pData;

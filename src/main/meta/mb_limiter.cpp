@@ -40,6 +40,13 @@ namespace lsp
     {
         //-------------------------------------------------------------------------
         // Plugin metadata
+        static const port_item_t limiter_split_modes[] =
+        {
+            { "Classic",        "mb_limiter.classic"    },
+            { "Modern",         "mb_limiter.modern"     },
+            { NULL, NULL }
+        };
+
         static port_item_t limiter_oper_modes[] =
         {
             { "Herm Thin",      "limiter.herm_thin"     },
@@ -118,9 +125,14 @@ namespace lsp
             IN_GAIN, \
             OUT_GAIN, \
             LOG_CONTROL("lk", "Lookahead", U_MSEC, mb_limiter::LOOKAHEAD), \
+            COMBO("mode", "Operating mode", 1, limiter_split_modes), \
             COMBO("ovs", "Oversampling", mb_limiter::OVS_DEFAULT, limiter_ovs_modes), \
-            COMBO("dith", "Dithering", mb_limiter::DITHER_DEFAULT, limiter_dither_modes), \
-            COMBO("envb", "Envelope boost", mb_limiter::FB_DEFAULT, limiter_sc_boost)
+            COMBO("dither", "Dithering", mb_limiter::DITHER_DEFAULT, limiter_dither_modes), \
+            COMBO("envb", "Envelope boost", mb_limiter::FB_DEFAULT, limiter_sc_boost), \
+            LOG_CONTROL("zoom", "Graph zoom", U_GAIN_AMP, mb_limiter::ZOOM), \
+            SWITCH("flt", "Band filter curves", 1.0f), \
+            LOG_CONTROL("react", "FFT reactivity", U_MSEC, mb_limiter::REACT_TIME), \
+            AMP_GAIN100("shift", "Shift gain", 1.0f)
 
         #define MBL_SC_COMMON \
             MBL_COMMON, \
@@ -136,7 +148,7 @@ namespace lsp
             LOG_CONTROL("aat" id, "Automatic level regulation attack time" label, U_MSEC, mb_limiter::ALR_ATTACK_TIME), \
             LOG_CONTROL("art" id, "Automatic level regulation release time" label, U_MSEC, mb_limiter::ALR_RELEASE_TIME), \
             LOG_CONTROL("akn" id, "Automatic level regulation knee" label, U_GAIN_AMP, mb_limiter::KNEE), \
-            COMBO("mode" id, "Operating mode" label, mb_limiter::LOM_DEFAULT, limiter_oper_modes), \
+            COMBO("lm" id, "Operating mode" label, mb_limiter::LOM_DEFAULT, limiter_oper_modes), \
             LOG_CONTROL("th" id, "Threshold" label, U_GAIN_AMP, mb_limiter::THRESHOLD), \
             SWITCH("gb" id, "Gain boost" label, 1.0f), \
             LOG_CONTROL("at" id, "Attack time" label, U_MSEC, mb_limiter::ATTACK_TIME), \
@@ -181,7 +193,7 @@ namespace lsp
             METER_OUT_GAIN("olm" id, "Output level meter" label, GAIN_AMP_0_DB), \
             MESH("ifg" id, "Input FFT graph" label, 2, mb_limiter::FFT_MESH_POINTS + 2), \
             MESH("ofg" id, "Output FFT graph" label, 2, mb_limiter::FFT_MESH_POINTS), \
-            MESH("fg" id, "Filter graph" label, 2, mb_limiter::FFT_MESH_POINTS + 2)
+            MESH("ag" id, "Amplification graph" label, 2, mb_limiter::FFT_MESH_POINTS + 2)
 
         #define MBL_METERS_MONO \
             MBL_METERS("", "")

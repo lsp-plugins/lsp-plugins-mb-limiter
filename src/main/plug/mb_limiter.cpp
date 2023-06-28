@@ -97,10 +97,14 @@ namespace lsp
             pInGain             = NULL;
             pOutGain            = NULL;
             pLookahead          = NULL;
+            pMode               = NULL;
             pOversampling       = NULL;
             pDithering          = NULL;
             pEnvBoost           = NULL;
+            pZoom               = NULL;
             pExtSc              = NULL;
+            pReactivity         = NULL;
+            pShift              = NULL;
 
             pData               = NULL;
         }
@@ -253,9 +257,14 @@ namespace lsp
             pInGain             = TRACE_PORT(ports[port_id++]);
             pOutGain            = TRACE_PORT(ports[port_id++]);
             pLookahead          = TRACE_PORT(ports[port_id++]);
+            pMode               = TRACE_PORT(ports[port_id++]);
             pOversampling       = TRACE_PORT(ports[port_id++]);
             pDithering          = TRACE_PORT(ports[port_id++]);
             pEnvBoost           = TRACE_PORT(ports[port_id++]);
+            pZoom               = TRACE_PORT(ports[port_id++]);
+            TRACE_PORT(ports[port_id++]); // Skip band filter curve control port
+            pReactivity         = TRACE_PORT(ports[port_id++]);
+            pShift              = TRACE_PORT(ports[port_id++]);
             pExtSc              = (bSidechain) ? TRACE_PORT(ports[port_id++]) : NULL;
 
             // Bind metering ports

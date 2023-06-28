@@ -1,6 +1,22 @@
 {
 	"mb_limiter": {
 		"classic": "Классический",
+		"mode": {
+	        "exp_duck": "Эксп нырок",
+	        "exp_tail": "Эксп хвост",
+	        "exp_thin": "Эксп узк",
+	        "exp_wide": "Эксп широк",
+	        
+			"herm_duck": "Эрмит нырок",
+	        "herm_tail": "Эрмит хвост",
+	        "herm_thin": "Эрмит узк",
+	        "herm_wide": "Эрмит широк",
+	
+	        "line_duck": "Лин нырок",
+	        "line_tail": "Лин хвост",
+	        "line_thin": "Лин узк",
+	        "line_wide": "Лин широк"
+		},
 		"modern": "Современный"
 	}
 }

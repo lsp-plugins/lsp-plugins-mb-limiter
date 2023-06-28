@@ -49,20 +49,20 @@ namespace lsp
 
         static port_item_t limiter_oper_modes[] =
         {
-            { "Herm Thin",      "limiter.herm_thin"     },
-            { "Herm Wide",      "limiter.herm_wide"     },
-            { "Herm Tail",      "limiter.herm_tail"     },
-            { "Herm Duck",      "limiter.herm_duck"     },
+            { "Herm Thin",      "mb_limiter.mode.herm_thin"     },
+            { "Herm Wide",      "mb_limiter.mode.herm_wide"     },
+            { "Herm Tail",      "mb_limiter.mode.herm_tail"     },
+            { "Herm Duck",      "mb_limiter.mode.herm_duck"     },
 
-            { "Exp Thin",       "limiter.exp_thin"      },
-            { "Exp Wide",       "limiter.exp_wide"      },
-            { "Exp Tail",       "limiter.exp_tail"      },
-            { "Exp Duck",       "limiter.exp_duck"      },
+            { "Exp Thin",       "mb_limiter.mode.exp_thin"      },
+            { "Exp Wide",       "mb_limiter.mode.exp_wide"      },
+            { "Exp Tail",       "mb_limiter.mode.exp_tail"      },
+            { "Exp Duck",       "mb_limiter.mode.exp_duck"      },
 
-            { "Line Thin",      "limiter.line_thin"     },
-            { "Line Wide",      "limiter.line_wide"     },
-            { "Line Tail",      "limiter.line_tail"     },
-            { "Line Duck",      "limiter.line_duck"     },
+            { "Line Thin",      "mb_limiter.mode.line_thin"     },
+            { "Line Wide",      "mb_limiter.mode.line_wide"     },
+            { "Line Tail",      "mb_limiter.mode.line_tail"     },
+            { "Line Duck",      "mb_limiter.mode.line_duck"     },
 
             { NULL, NULL }
         };

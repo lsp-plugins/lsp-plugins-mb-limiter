@@ -54,17 +54,24 @@
 					hlcolor="graph_marker_cycle"
 					rcolor="graph_marker_cycle"
 					hrcolor="graph_marker_cycle">
-					<marker v="10" color.hue=":hue_0" hcolor.hue=":hue_0" rborder="16" rcolor.hue=":hue_0" hrborder="16" hrcolor.hue=":hue_0"/>
-					<marker id="fre_0" color.hue=":hue_0" hcolor.hue=":hue_0" lborder="16" lcolor.hue=":hue_0" hlborder="16" hlcolor.hue=":hue_0"/>
-					<ui:for id="i" first="1" last="7">
-						<marker id="sf_${i}" visibility=":cbe_${i}" editable="true" color.hue=":hue_${i}" hcolor.hue=":hue_${i}" rborder="16" rcolor.hue=":hue_${i}" hrborder="16" hrcolor.hue=":hue_${i}" pointer="hsize"/>
-						<marker id="fre_${i}" visibility=":cbe_${i}" color.hue=":hue_${i}" hcolor.hue=":hue_${i}" lborder="16" lcolor.hue=":hue_${i}" hlborder="16" hlcolor.hue=":hue_${i}"/>
+					
+					<marker v="10" color.hue="0" hcolor.hue="0" rborder="16" rcolor.hue="0" hrborder="16" hrcolor.hue="0"/>
+					<marker id="fre_1" color.hue="0" hcolor.hue="0" lborder="16" lcolor.hue="0" hlborder="16" hlcolor.hue="0"/>
+					<ui:for id="i" first="1" count="7">
+						<marker id="sf_${i}" visibility=":se_${i}" editable="true"
+							color.hue="${:i * 0.125}" hcolor.hue="${:i * 0.125}"
+							rborder="16" rcolor.hue="${:i * 0.125}" hrborder="16" hrcolor.hue="${:i * 0.125}"
+							pointer="hsize" />
+						<marker id="fre_${:i+1}" visibility=":se_${i}"
+							color.hue="${:i * 0.125}" hcolor.hue="${:i * 0.125}"
+							lborder="16" lcolor.hue="${:i * 0.125}"
+							hlborder="16" hlcolor.hue="${:i * 0.125}"/>
 					</ui:for>
 				</ui:with>
 
 				<!-- Meshes -->
-				<mesh id="bfc_0" width="2" fill="true" smooth="true" color="graph_mesh_cycle" color.hue=":hue_0" fcolor="graph_mesh_cycle" fcolor.hue=":hue_0" fcolor.a="0.9" visibility=":flt"/>
-				<ui:for id="i" first="1" last="7">
+				<mesh id="bfc_1" width="2" fill="true" smooth="true" color="graph_mesh_cycle" color.hue=":hue_0" fcolor="graph_mesh_cycle" fcolor.hue=":hue_0" fcolor.a="0.9" visibility=":flt"/>
+				<ui:for id="i" first="2" count="7">
 					<mesh id="bfc_${i}" width="2" fill="true" smooth="true" color="graph_mesh_cycle" color.hue=":hue_${i}" fcolor="graph_mesh_cycle" fcolor.hue=":hue_${i}" fcolor.a="0.9" visibility=":flt and :se_${i}"/>
 				</ui:for>
 				
@@ -76,10 +83,6 @@
 				<mesh id="ag_l" width="3" color="left" smooth="true"/>
 				<mesh id="ag_r" width="3" color="right" smooth="true"/>
 
-				<!-- Boundaries -->
-				<marker v="1" ox="2" oy="0" color="graph_prim" visibility="false"/>
-				<marker v="24000" color="graph_prim" visibility="false"/>
-
 				<!-- Axis -->
 				<axis min="10" max="24000" angle="0.0" log="true" visibility="false"/>
 				<axis min="-72 db / (:zoom ** 3)" max="24 db * :zoom" color="graph_prim" angle="0.5" log="true"/>
@@ -87,20 +90,20 @@
 
 				<!-- Text -->
 				<ui:with ox="0" oy="2" y="0" halign="1" valign="1">
-				  <text x="10" text="graph.units.hz"/>
-				  <text x="20" text="20"/>
-				  <text x="30" text="30"/>
-				  <text x="50" text="50"/>
-				  <text x="100" text="100"/>
-				  <text x="200" text="200"/>
-				  <text x="300" text="300"/>
-				  <text x="500" text="500"/>
-				  <text x="1000" text="graph.values.x_k" text:value="1"/>
-				  <text x="2000" text="graph.values.x_k" text:value="2"/>
-				  <text x="3000" text="graph.values.x_k" text:value="3"/>
-				  <text x="5000" text="graph.values.x_k" text:value="5"/>
-				  <text x="10000" text="graph.values.x_k" text:value="10"/>
-				  <text x="20000" text="graph.values.x_k" text:value="20"/>
+					<text x="10" text="graph.units.hz"/>
+					<text x="20" text="20"/>
+					<text x="30" text="30"/>
+					<text x="50" text="50"/>
+					<text x="100" text="100"/>
+					<text x="200" text="200"/>
+					<text x="300" text="300"/>
+					<text x="500" text="500"/>
+					<text x="1000" text="graph.values.x_k" text:value="1"/>
+					<text x="2000" text="graph.values.x_k" text:value="2"/>
+					<text x="3000" text="graph.values.x_k" text:value="3"/>
+					<text x="5000" text="graph.values.x_k" text:value="5"/>
+					<text x="10000" text="graph.values.x_k" text:value="10"/>
+					<text x="20000" text="graph.values.x_k" text:value="20"/>
 				</ui:with>
 
 				<ui:with x="10" halign="1" valign="1">
@@ -174,16 +177,20 @@
 							<align halign="-1" pad.t="4" pad.l="6">
 								<label text="labels.fft.fft_in"/>
 							</align>
-							<hbox spacing="4" pad.v="4" pad.h="6" hfill="false"><button id="ife_l" text="labels.chan.L_eft" size="19" ui:inject="Button_left_8"/>
-								<button id="ife_r" text="labels.chan.R_ight" size="19" ui:inject="Button_right_8"/></hbox>
+							<hbox spacing="4" pad.v="4" pad.h="6" hfill="false">
+								<button id="ife_l" text="labels.chan.L_eft" size="19" ui:inject="Button_left_8"/>
+								<button id="ife_r" text="labels.chan.R_ight" size="19" ui:inject="Button_right_8"/>
+							</hbox>
 
 							<cell cols="2"><hsep pad.v="2" bg.color="bg" vreduce="true"/></cell>
 
 							<align halign="-1" pad.t="4" pad.l="6">
 								<label text="labels.fft.fft_out" halign="0"/>
 							</align>
-							<hbox spacing="4" pad.v="4" pad.h="6" hfill="false"><button id="ofe_l" text="labels.chan.L_eft" size="19" ui:inject="Button_left_8"/>
-								<button id="ofe_r" text="labels.chan.R_ight" size="19" ui:inject="Button_right_8"/></hbox>
+							<hbox spacing="4" pad.v="4" pad.h="6" hfill="false">
+								<button id="ofe_l" text="labels.chan.L_eft" size="19" ui:inject="Button_left_8"/>
+								<button id="ofe_r" text="labels.chan.R_ight" size="19" ui:inject="Button_right_8"/>
+							</hbox>
 
 							<cell cols="2"><hsep pad.v="2" bg.color="bg" vreduce="true"/></cell>
 						</grid>
@@ -221,5 +228,112 @@
 			</hbox>
 		</align>
 	
+		<!-- Row 3: limiter bands -->
+		<cell cols="4">
+			<group text="LIMITER BANDS"> <!-- TODO -->
+				<grid rows="18" cols="14">
+					<!-- Row 1 -->
+					<cell rows="2" cols="2">
+						<label text="labels.range" />
+					</cell>
+					<cell rows="2">
+						<label text="labels.controls" />
+					</cell>
+					<cell cols="3">
+						<label text="labels.alr" />
+					</cell>
+					<cell cols="8">
+						<label text="labels.plug.limiter" />
+					</cell>
+					
+					<!-- Row 2 -->
+					<label text="labels.attack" />
+					<label text="labels.release" />
+					<label text="labels.knee" />
+					
+					<label text="labels.preamp" />
+					<label text="labels.mode" />
+					<label text="labels.thresh_old" />
+					<label text="labels.attack" />
+					<label text="labels.release" />
+					<label text="labels.stereo_link" />
+					<label text="labels.makeup" />
+					<label text="labels.reduction" />
+					
+					<ui:for id="i" first="1" count="8">
+						<!-- Row 1 -->
+						<ui:if test=":i ile 1">
+							<void />
+							<void />
+						</ui:if>
+						<ui:if test=":i igt 1">
+							<button id="se_${:i-1}" text="labels.chan.ON" />
+							<knob id="sf_${:i-1}" />
+						</ui:if>
+						
+						<cell rows="2">
+							<grid rows="2" cols="2">
+								<button id="bs_${i}" text="labels.chan.S_olo" height="19" hfill="true" ui:inject="Button_green_8"/>
+								<button id="on_${i}" text="labels.chan.ON" height="19" hfill="true" ui:inject="Button_yellow_8"/>
+								
+								<button id="bm_${i}" text="labels.chan.M_ute" height="19" hfill="true" ui:inject="Button_red_8"/>
+								<button id="alr_${i}" text="labels.alr" height="19" hfill="true" ui:inject="Button_yellow_8"/>
+							</grid>
+						</cell>
+						<knob id="aat_${i}" />
+						<knob id="art_${i}" />
+						<knob id="akn_${i}" />
+						
+						<knob id="bpa_${i}" />
+						<cell rows="2">
+							<vbox>
+								<combo id="lm_${i}" />
+								<button id="gb_${i}" pad.h="6" height="18" width="70" text="labels.boost_" ui:inject="Button_violet_8"/>
+							</vbox>
+						</cell>
+						<knob id="th_${i}" />
+						<knob id="at_${i}" />
+						<knob id="rt_${i}" />
+						<knob id="bsl_${i}" />
+						<knob id="bmk_${i}" />
+						<cell rows="2">
+							<ledmeter>
+								<ledchannel id="rlm_l" min="-72 db" max="12 db" log="true" type="rms_peak" peak.visibility="true" value.color="left"/>
+								<ledchannel id="rlm_r" min="-72 db" max="12 db" log="true" type="rms_peak" peak.visibility="true" value.color="right"/>
+							</ledmeter>
+						</cell>
+						
+						<!-- Row 2 -->
+						<cell cols="2">
+							<hbox>
+								<ui:if test=":i ile 1">
+									<label text="0" />
+									<label text="-" />
+									<value id="fre_${i}" />
+								</ui:if>
+								<ui:if test=":i igt 1">
+									<value id="sf_${i}" />
+									<label text="-" />
+									<value id="fre_${i}" />
+								</ui:if>
+							</hbox>
+						</cell>
+						<value id="aat_${i}" sline="true" />
+						<value id="art_${i}" sline="true" />
+						<value id="akn_${i}" sline="true" />
+						<value id="bpa_${i}" sline="true" />
+						<value id="th_${i}" sline="true" />
+						<value id="at_${i}" sline="true" />
+						<value id="rt_${i}" sline="true" />
+						<value id="bsl_${i}" sline="true" />
+						<value id="bmk_${i}" sline="true" />
+						
+					</ui:for>
+
+				</grid>
+			</group>
+		</cell>
+		<group text="MAIN LIMITER"> <!-- TODO -->
+		</group>
 	</grid>
 </plugin>

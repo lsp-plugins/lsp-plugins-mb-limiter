@@ -25,7 +25,9 @@
 #include <lsp-plug.in/dsp-units/ctl/Blink.h>
 #include <lsp-plug.in/dsp-units/ctl/Bypass.h>
 #include <lsp-plug.in/dsp-units/dynamics/Limiter.h>
+#include <lsp-plug.in/dsp-units/filters/DynamicFilters.h>
 #include <lsp-plug.in/dsp-units/filters/Equalizer.h>
+#include <lsp-plug.in/dsp-units/util/Analyzer.h>
 #include <lsp-plug.in/dsp-units/util/Delay.h>
 #include <lsp-plug.in/dsp-units/util/Dither.h>
 #include <lsp-plug.in/dsp-units/util/Oversampler.h>
@@ -73,7 +75,7 @@ namespace lsp
 
                 typedef struct band_t: public limiter_t
                 {
-                    dspu::Equalizer         sEQ;                // Sidechain equalizer
+                    dspu::Equalizer         sEq;                // Sidechain equalizer
                     dspu::Filter            sPassFilter;        // Passing filter for 'classic' mode
                     dspu::Filter            sRejFilter;         // Rejection filter for 'classic' mode
                     dspu::Filter            sAllFilter;         // All-pass filter for phase compensation
@@ -85,8 +87,9 @@ namespace lsp
                     float                   fFreqStart;         // Start frequency of the band
                     float                   fFreqEnd;           // End frequency of the band
                     float                   fMakeup;            // Makeup gain
+                    float                   fGainLevel;         // Gain level
 
-                    float                  *vTr;                // Transfer function
+                    float                  *vTrOut;             // Transfer function output
                     float                  *vVCA;               // Voltage-controlled amplification value for each band
 
                     size_t                  nFilterID;          // Identifier of the filter
@@ -114,15 +117,21 @@ namespace lsp
                     dspu::Dither            sDither;            // Dither
                     dspu::Oversampler       sOver;              // Oversampler object for signal
                     dspu::Oversampler       sScOver;            // Sidechain oversampler object for signal
-                    dspu::Equalizer         sScEQ;              // Sidechain equalizer
+                    dspu::Filter            sScBoost;           // Sidechain booster
                     dspu::Delay             sDryDelay;          // Dry delay
 
                     band_t                  vBands[meta::mb_limiter::BANDS_MAX];    // Band processors
+                    band_t                 *vPlan[meta::mb_limiter::BANDS_MAX];     // Actual plan
                     limiter_t               sLimiter;           // Output limiter
 
                     const float            *vIn;                // Input data
                     const float            *vSc;                // Sidechain data
                     float                  *vOut;               // Output data
+                    float                  *vTrOut;             // Transfer function output
+                    bool                    bFftIn;             // Output input FFT analysis
+                    bool                    bFftOut;            // Output output FFT analysis
+                    size_t                  nAnInChannel;       // Analyzer channel used for input signal analysis
+                    size_t                  nAnOutChannel;      // Analyzer channel used for output signal analysis
 
                     plug::IPort            *pIn;                // Input port
                     plug::IPort            *pOut;               // Output port
@@ -137,13 +146,26 @@ namespace lsp
                 } channel_t;
 
             protected:
+                dspu::Analyzer          sAnalyzer;          // Analyzer
+                dspu::DynamicFilters    sFilters;           // Dynamic filters for each band in 'modern' mode
                 size_t                  nChannels;          // Number of channels
                 bool                    bSidechain;         // Sidechain switch is present
                 bool                    bExtSc;             // External sidechain turned on
+                bool                    bModern;            // Modern mode
+                bool                    bEnvUpdate;         // Request for envelope update
                 float                   fInGain;            // Input gain
                 float                   fOutGain;           // Output gain
+                float                   fZoom;              // Zoom
                 size_t                  nOversampling;      // Oversampling
+                size_t                  nEnvBoost;          // Envelope boosting
+                size_t                  nLookahead;         // Lookahead buffer size
+
                 channel_t              *vChannels;          // Channels
+                uint32_t               *vIndexes;           // Analyzer FFT indexes
+                float                  *vFreqs;             // Analyzer FFT frequencies
+                float                  *vTr;                // Buffer for computing transfer function
+                float                  *vTrTmp;             // Temporary buffer for computing transfer function
+                float                  *vFc;                // Filter characteristics
                 core::IDBuffer         *pIDisplay;          // Inline display buffer
 
                 split_t                 vSplits[meta::mb_limiter::BANDS_MAX-1];     // Frequency splits
@@ -165,19 +187,23 @@ namespace lsp
 
                 uint8_t                *pData;
 
+            protected:
+                void                    output_fft_curves();
+                dspu::limiter_mode_t    decode_limiter_mode(ssize_t mode);
+
             public:
                 explicit mb_limiter(const meta::plugin_t *meta);
                 virtual ~mb_limiter() override;
 
-                virtual void        init(plug::IWrapper *wrapper, plug::IPort **ports) override;
-                virtual void        destroy() override;
+                virtual void            init(plug::IWrapper *wrapper, plug::IPort **ports) override;
+                virtual void            destroy() override;
 
             public:
-                virtual void        update_sample_rate(long sr) override;
-                virtual void        update_settings() override;
-                virtual void        process(size_t samples) override;
-                virtual bool        inline_display(plug::ICanvas *cv, size_t width, size_t height) override;
-                virtual void        dump(dspu::IStateDumper *v) const override;
+                virtual void            update_sample_rate(long sr) override;
+                virtual void            update_settings() override;
+                virtual void            process(size_t samples) override;
+                virtual bool            inline_display(plug::ICanvas *cv, size_t width, size_t height) override;
+                virtual void            dump(dspu::IStateDumper *v) const override;
         };
 
     } /* namespace plugins */

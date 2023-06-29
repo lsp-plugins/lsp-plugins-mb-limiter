@@ -100,6 +100,9 @@ namespace lsp
             static constexpr size_t FFT_WINDOW              = dspu::windows::HANN;
             static constexpr size_t BANDS_MAX               = 8;
             static constexpr size_t BANDS_DFL               = 4;
+            static constexpr size_t REFRESH_RATE            = 20;
+            static constexpr float  FREQ_BOOST_MIN          = 10.0f;
+            static constexpr float  FREQ_BOOST_MAX          = 20000.0f;
 
             enum oversampling_mode_t
             {

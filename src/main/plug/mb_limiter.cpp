@@ -22,6 +22,7 @@
 #include <lsp-plug.in/common/alloc.h>
 #include <lsp-plug.in/common/debug.h>
 #include <lsp-plug.in/dsp/dsp.h>
+#include <lsp-plug.in/dsp-units/misc/envelope.h>
 #include <lsp-plug.in/dsp-units/units.h>
 #include <lsp-plug.in/plug-fw/meta/func.h>
 
@@ -74,10 +75,21 @@ namespace lsp
                 bSidechain      = true;
 
             bExtSc              = false;
+            bModern             = true;
+            bEnvUpdate          = true;
             fInGain             = GAIN_AMP_0_DB;
             fOutGain            = GAIN_AMP_0_DB;
+            fZoom               = 1.0f;
+            nEnvBoost           = -1;
             nOversampling       = 0;
+            nLookahead          = 0;
+
             vChannels           = NULL;
+            vFreqs              = NULL;
+            vIndexes            = NULL;
+            vTr                 = NULL;
+            vTrTmp              = NULL;
+            vFc                 = NULL;
             pIDisplay           = NULL;
 
             for (size_t i=0; i<(meta::mb_limiter::BANDS_MAX-1); ++i)
@@ -92,6 +104,8 @@ namespace lsp
             }
 
             nPlanSize           = 0;
+            for (size_t i=0; i<meta::mb_limiter::BANDS_MAX; ++i)
+                vPlan[i]            = 0;
 
             pBypass             = NULL;
             pInGain             = NULL;
@@ -119,9 +133,33 @@ namespace lsp
             // Call parent class for initialization
             Module::init(wrapper, ports);
 
-            size_t szof_channel     = sizeof(channel_t);
+            size_t an_id            = 0;
+            size_t szof_channel     = align_size(sizeof(channel_t), OPTIMAL_ALIGN);
+            size_t szof_indexes     = meta::mb_limiter::FFT_MESH_POINTS * sizeof(uint32_t);
+            size_t szof_fft_graph   = meta::mb_limiter::FFT_MESH_POINTS * sizeof(float);
+            size_t to_alloc         =
+                szof_channel * nChannels +      // vChannels
+                szof_fft_graph +                // vFreqs
+                szof_indexes +                  // vIndexes
+                szof_fft_graph * 2 +            // vTr
+                szof_fft_graph * 2 +            // vTrTmp
+                szof_fft_graph * 2 +            // vFc
+                nChannels * (
+                    szof_fft_graph +            // vTrOut
+                    meta::mb_limiter::BANDS_MAX * (
+                        szof_fft_graph          // vTrOut
+                    )
+                );
 
-            size_t to_alloc         = szof_channel * nChannels;
+            // Initialize analyzer
+            if (!sAnalyzer.init(nChannels * 2, meta::mb_limiter::FFT_RANK,
+                MAX_SAMPLE_RATE, meta::mb_limiter::REFRESH_RATE))
+                return;
+            sAnalyzer.set_rank(meta::mb_limiter::FFT_RANK);
+            sAnalyzer.set_activity(false);
+            sAnalyzer.set_envelope(dspu::envelope::WHITE_NOISE);
+            sAnalyzer.set_window(meta::mb_limiter::FFT_WINDOW);
+            sAnalyzer.set_rate(meta::mb_limiter::REFRESH_RATE);
 
             // Allocate data
             uint8_t *ptr            = alloc_aligned<uint8_t>(pData, to_alloc);
@@ -131,6 +169,16 @@ namespace lsp
             // Allocate objects
             vChannels               = reinterpret_cast<channel_t *>(ptr);
             ptr                    += szof_channel * nChannels;
+            vFreqs                  = reinterpret_cast<float *>(ptr);
+            ptr                    += szof_fft_graph;
+            vIndexes                = reinterpret_cast<uint32_t *>(ptr);
+            ptr                    += szof_indexes;
+            vTr                     = reinterpret_cast<float *>(ptr);
+            ptr                    += szof_fft_graph * 2;
+            vTrTmp                  = reinterpret_cast<float *>(ptr);
+            ptr                    += szof_fft_graph * 2;
+            vFc                     = reinterpret_cast<float *>(ptr);
+            ptr                    += szof_fft_graph * 2;
 
             // Initialize objects
             for (size_t i=0; i<nChannels; ++i)
@@ -142,10 +190,13 @@ namespace lsp
                 c->sDither.construct();
                 c->sOver.construct();
                 c->sScOver.construct();
-                c->sScEQ.construct();
+                c->sScBoost.construct();
                 c->sDryDelay.construct();
 
-                // Destroy bands
+                if (!c->sScBoost.init(NULL))
+                    return;
+
+                // Init bands
                 for (size_t j=0; j<meta::mb_limiter::BANDS_MAX; ++j)
                 {
                     band_t *b   = &c->vBands[j];
@@ -172,23 +223,32 @@ namespace lsp
                     b->pReductionMeter  = NULL;
 
                     // band_t
-                    b->sEQ.construct();
+                    b->sEq.construct();
                     b->sPassFilter.construct();
                     b->sRejFilter.construct();
                     b->sAllFilter.construct();
 
-                    b->sEQ.init(2, 0);
-                    b->sPassFilter.init(NULL);
-                    b->sRejFilter.init(NULL);
-                    b->sAllFilter.init(NULL);
+                    if (!b->sEq.init(2, 0))
+                        return;
+                    if (!b->sPassFilter.init(NULL))
+                        return;
+                    if (!b->sRejFilter.init(NULL))
+                        return;
+                    if (!b->sAllFilter.init(NULL))
+                        return;
+                    b->sEq.set_mode(dspu::EQM_IIR);
 
                     b->bSync            = false;
                     b->bMute            = false;
                     b->bSolo            = false;
+                    b->fPreamp          = GAIN_AMP_0_DB;
                     b->fFreqStart       = 0.0f;
                     b->fFreqEnd         = 0.0f;
+                    b->fMakeup          = GAIN_AMP_0_DB;
+                    b->fGainLevel       = GAIN_AMP_0_DB;
 
-                    b->vTr              = NULL;
+                    b->vTrOut           = reinterpret_cast<float *>(ptr);
+                    ptr                += szof_fft_graph;
                     b->vVCA             = NULL;
 
                     b->nFilterID        = 0;
@@ -228,6 +288,13 @@ namespace lsp
                 c->vIn              = NULL;
                 c->vSc              = NULL;
                 c->vOut             = NULL;
+                c->vTrOut           = reinterpret_cast<float *>(ptr);
+                ptr                += szof_fft_graph;
+                c->nAnInChannel     = an_id++;
+                c->nAnOutChannel    = an_id++;
+
+                for (size_t i=0; i<meta::mb_limiter::BANDS_MAX; ++i)
+                    c->vPlan[i]         = 0;
 
                 c->pIn              = NULL;
                 c->pOut             = NULL;
@@ -402,6 +469,10 @@ namespace lsp
         {
             Module::destroy();
 
+            // Destroy processors
+            sAnalyzer.destroy();
+            sFilters.destroy();
+
             // Destroy channels
             if (vChannels != NULL)
             {
@@ -413,7 +484,7 @@ namespace lsp
                     c->sDither.destroy();
                     c->sOver.destroy();
                     c->sScOver.destroy();
-                    c->sScEQ.destroy();
+                    c->sScBoost.destroy();
                     c->sDryDelay.destroy();
 
                     // Destroy bands
@@ -423,7 +494,7 @@ namespace lsp
 
                         b->sLimit.destroy();
                         b->sBlink.destroy();
-                        b->sEQ.destroy();
+                        b->sEq.destroy();
                         b->sPassFilter.destroy();
                         b->sRejFilter.destroy();
                         b->sAllFilter.destroy();
@@ -448,17 +519,566 @@ namespace lsp
 
         void mb_limiter::update_sample_rate(long sr)
         {
-            // TODO
+            // Update analyzer's sample rate
+            sAnalyzer.set_sample_rate(sr);
+            sFilters.set_sample_rate(sr);
+
+            // Update channels
+            for (size_t i=0; i<nChannels; ++i)
+            {
+                channel_t *c = &vChannels[i];
+
+                c->sBypass.init(sr);
+                c->sOver.set_sample_rate(sr);
+                c->sScBoost.set_sample_rate(sr);
+//                c->sDryDelay.init(max_delay); // TODO
+
+                // Update bands
+                for (size_t j=0; j<meta::mb_limiter::BANDS_MAX; ++j)
+                {
+                    band_t *b  = &c->vBands[j];
+
+                    b->sEq.set_sample_rate(sr);
+                    b->sPassFilter.set_sample_rate(sr);
+                    b->sRejFilter.set_sample_rate(sr);
+                    b->sAllFilter.set_sample_rate(sr);
+                }
+            }
+
+            // Force to rebuild plan
+            nPlanSize        = 0;
+        }
+
+        dspu::limiter_mode_t mb_limiter::decode_limiter_mode(ssize_t mode)
+        {
+            switch (mode)
+            {
+                case meta::mb_limiter::LOM_HERM_THIN:
+                    return dspu::LM_HERM_THIN;
+                case meta::mb_limiter::LOM_HERM_WIDE:
+                    return dspu::LM_HERM_WIDE;
+                case meta::mb_limiter::LOM_HERM_TAIL:
+                    return dspu::LM_HERM_TAIL;
+                case meta::mb_limiter::LOM_HERM_DUCK:
+                    return dspu::LM_HERM_DUCK;
+
+                case meta::mb_limiter::LOM_EXP_THIN:
+                    return dspu::LM_EXP_THIN;
+                case meta::mb_limiter::LOM_EXP_WIDE:
+                    return dspu::LM_EXP_WIDE;
+                case meta::mb_limiter::LOM_EXP_TAIL:
+                    return dspu::LM_EXP_TAIL;
+                case meta::mb_limiter::LOM_EXP_DUCK:
+                    return dspu::LM_EXP_DUCK;
+
+                case meta::mb_limiter::LOM_LINE_THIN:
+                    return dspu::LM_LINE_THIN;
+                case meta::mb_limiter::LOM_LINE_WIDE:
+                    return dspu::LM_LINE_WIDE;
+                case meta::mb_limiter::LOM_LINE_TAIL:
+                    return dspu::LM_LINE_TAIL;
+                case meta::mb_limiter::LOM_LINE_DUCK:
+                    return dspu::LM_LINE_DUCK;
+
+                default:
+                    break;
+            }
+            return dspu::LM_HERM_THIN;
         }
 
         void mb_limiter::update_settings()
         {
-            // TODO
+            dspu::filter_params_t fp;
+
+            // Determine number of channels
+            bool rebuild_bands  = nPlanSize <= 0;
+            int active_channels = 0;
+            size_t env_boost    = pEnvBoost->value();
+
+            // Determine work mode: classic or modern
+            bool modern         = pMode->value() >= 0.5f;
+            if (modern != bModern)
+            {
+                bModern             = modern;
+                rebuild_bands       = true;     // Force to rebuild plan
+            }
+
+            // Store gain
+            fInGain             = pInGain->value();
+            fOutGain            = pOutGain->value();
+            fZoom               = pZoom->value();
+
+            // Update frequency split bands
+            for (size_t i=0; i<meta::mb_limiter::BANDS_MAX-1; ++i)
+            {
+                split_t *s      = &vSplits[i];
+
+                bool enabled    = s->pEnabled->value() >= 0.5f;
+                if (enabled != s->bEnabled)
+                {
+                    s->bEnabled     = enabled;
+                    rebuild_bands   = true;
+                }
+
+                float freq      = s->pFreq->value();
+                if ((enabled) && (freq != s->fFreq))
+                {
+                    s->fFreq        = freq;
+                    rebuild_bands   = true;
+                }
+            }
+
+            // Rebuild compression plan
+            if (rebuild_bands)
+            {
+                nPlanSize               = 1;
+                vPlan[0]                = 0;    // 0th band is always present
+
+                for (size_t i=0; i<meta::mb_limiter::BANDS_MAX-1; ++i)
+                {
+                    if (vSplits[i].bEnabled)
+                        vPlan[nPlanSize++]    = i+1;
+                }
+
+                // Do simple sort of PLAN items by frequency
+                if (nPlanSize > 1)
+                {
+                    // Sort plan in frequency-descending order
+                    for (size_t si=1; si < nPlanSize-1; ++si)
+                        for (size_t sj=si+1; sj < nPlanSize; ++sj)
+                        {
+                            size_t p1 = vPlan[si] - 1, p2 = vPlan[sj] - 1;
+                            if (vSplits[p1].fFreq > vSplits[p2].fFreq)
+                                lsp::swap(vPlan[si], vPlan[sj]);
+                        }
+                }
+            }
+
+            // Configure channels (first pass)
+            for (size_t i=0; i<nChannels; ++i)
+            {
+                channel_t *c    = &vChannels[i];
+
+                // Update bypass settings
+                c->sBypass.set_bypass(pBypass->value());
+
+                // Update analyzer settings
+                c->bFftIn       = c->pFftInEnable->value() >= 0.5f;
+                c->bFftOut      = c->pFftOutEnable->value() >= 0.5f;
+
+                sAnalyzer.enable_channel(c->nAnInChannel, c->bFftIn);
+                sAnalyzer.enable_channel(c->nAnOutChannel, c->bFftOut);
+
+                if (sAnalyzer.channel_active(c->nAnInChannel))
+                    active_channels ++;
+                if (sAnalyzer.channel_active(c->nAnOutChannel))
+                    active_channels ++;
+
+                // Update envelope boost filters
+                if ((env_boost != nEnvBoost) || (bEnvUpdate))
+                {
+                    fp.fFreq        = meta::mb_limiter::FREQ_BOOST_MIN;
+                    fp.fFreq2       = 0.0f;
+                    fp.fGain        = 1.0f;
+                    fp.fQuality     = 0.0f;
+
+                    switch (env_boost)
+                    {
+                        case meta::mb_limiter::FB_BT_3DB:
+                            fp.nType        = dspu::FLT_BT_RLC_ENVELOPE;
+                            fp.nSlope       = 1;
+                            break;
+                        case meta::mb_limiter::FB_MT_3DB:
+                            fp.nType        = dspu::FLT_MT_RLC_ENVELOPE;
+                            fp.nSlope       = 1;
+                            break;
+                        case meta::mb_limiter::FB_BT_6DB:
+                            fp.nType        = dspu::FLT_BT_RLC_ENVELOPE;
+                            fp.nSlope       = 2;
+                            break;
+                        case meta::mb_limiter::FB_MT_6DB:
+                            fp.nType        = dspu::FLT_MT_RLC_ENVELOPE;
+                            fp.nSlope       = 2;
+                            break;
+                        case meta::mb_limiter::FB_OFF:
+                        default:
+                            fp.nType        = dspu::FLT_NONE;
+                            fp.nSlope       = 1;
+                            break;
+                    }
+
+                    c->sScBoost.update(fSampleRate, &fp);
+                }
+            }
+
+            // Update analyzer parameters
+            sAnalyzer.set_reactivity(pReactivity->value());
+            if (pShift != NULL)
+                sAnalyzer.set_shift(pShift->value() * 100.0f);
+            sAnalyzer.set_activity(active_channels > 0);
+
+            // Update analyzer
+            if (sAnalyzer.needs_reconfiguration())
+            {
+                sAnalyzer.reconfigure();
+                sAnalyzer.get_frequencies(vFreqs, vIndexes, SPEC_FREQ_MIN, SPEC_FREQ_MAX, meta::mb_limiter::FFT_MESH_POINTS);
+            }
+
+            // Estimate lookahead buffer size
+            nLookahead      = dspu::millis_to_samples(fSampleRate, pLookahead->value());
+
+//            size_t latency = 0;
+            bool has_solo  = false;
+
+            // Configure channels (second pass)
+            for (size_t i=0; i<nChannels; ++i)
+            {
+                channel_t *c    = &vChannels[i];
+
+                // Update compressor bands
+                for (size_t j=0; j<meta::mb_limiter::BANDS_MAX; ++j)
+                {
+                    band_t *b       = &c->vBands[j];
+
+                    dspu::limiter_mode_t mode = decode_limiter_mode(b->pMode->value());
+                    bool enabled    = b->pEnable->value() >= 0.5f;
+                    bool boost      = b->pBoost->value() >= 0.5f;
+                    if (enabled && (j > 0))
+                        enabled         = vSplits[j-1].bEnabled;
+
+                    b->fPreamp      = b->pPreamp->value();
+                    b->bMute        = (b->pMute->value() >= 0.5f);
+                    b->bSolo        = (enabled) && (b->pSolo->value() >= 0.5f);
+                    b->fMakeup      = b->pMakeup->value();
+
+                    if (b->bSolo)
+                        has_solo            = true;
+
+                    // Update settings for limiter
+                    b->sLimit.set_mode(mode);
+                    b->sLimit.set_sample_rate(fSampleRate);  // TODO
+                    b->sLimit.set_lookahead(nLookahead);
+                    b->sLimit.set_threshold(b->pThresh->value(), !boost);
+                    b->sLimit.set_attack(b->pAttack->value());
+                    b->sLimit.set_release(b->pRelease->value());
+                    b->sLimit.set_knee(b->pAlrKnee->value());
+                    b->sLimit.set_alr(b->pAlrOn->value() >= 0.5f);
+                    b->sLimit.set_alr_attack(b->pAlrAttack->value());
+                    b->sLimit.set_alr_release(b->pAlrRelease->value());
+                }
+            }
+
+            // Configure channels (third pass)
+            for (size_t i=0; i<nChannels; ++i)
+            {
+                channel_t *c    = &vChannels[i];
+
+                // Check muting option
+                for (size_t j=0; j<meta::mb_limiter::BANDS_MAX; ++j)
+                {
+                    band_t *b       = &c->vBands[j];
+                    if ((!b->bMute) && (has_solo))
+                        b->bMute        = !b->bSolo;
+                    if (rebuild_bands)
+                        b->bEnabled     = false;
+                }
+
+                // Rebuild compression plan
+                if (rebuild_bands)
+                {
+                    // Configure equalizers
+                    lsp_trace("Configure bands according to new plan");
+
+                    // Disable all bands first
+                    for (size_t j=0; j<nPlanSize; ++j)
+                    {
+                        size_t band_id  = vPlan[j];
+
+                        band_t *b       = &c->vBands[band_id];
+                        b->bEnabled     = true;
+                        b->fFreqStart   = (band_id > 0) ? vSplits[band_id-1].fFreq : 0.0f;
+                        c->vPlan[j]     = b;
+                    }
+
+                    // Process only enabled bands
+                    for (size_t j=0; j < nPlanSize; ++j)
+                    {
+                        band_t *b       = c->vPlan[j];
+
+                        // Check that band is enabled
+                        b->bSync        = true;
+                        b->fFreqEnd     = (j < (nPlanSize - 1)) ? c->vPlan[j+1]->fFreqStart : fSampleRate >> 1;
+                        lsp_trace("[%d]: %f - %f", int(j), b->fFreqStart, b->fFreqEnd);
+                        b->pFreqEnd->set_value(b->fFreqEnd);
+
+                        // Configure equalizer for the sidechain
+                        {
+                            // Configure lo-pass sidechain filter
+                            fp.nType        = (j < (nPlanSize - 1)) ? dspu::FLT_BT_LRX_LOPASS : dspu::FLT_NONE;
+                            fp.fFreq        = b->fFreqEnd;
+                            fp.fFreq2       = fp.fFreq;
+                            fp.fQuality     = 0.0f;
+                            fp.fGain        = 1.0f;
+                            fp.fQuality     = 0.0f;
+                            fp.nSlope       = 3;
+
+                            b->sEq.set_params(0, &fp);
+
+                            // Configure hi-pass sidechain filter
+                            fp.nType        = (j > 0) ? dspu::FLT_BT_LRX_HIPASS : dspu::FLT_NONE;
+                            fp.fFreq        = b->fFreqStart;
+                            fp.fFreq2       = fp.fFreq;
+                            fp.fQuality     = 0.0f;
+                            fp.fGain        = 1.0f;
+                            fp.fQuality     = 0.0f;
+                            fp.nSlope       = 3;
+
+                            b->sEq.set_params(1, &fp);
+                        }
+
+                        // Update transfer function for equalizer
+                        b->sEq.freq_chart(vTr, vFreqs, meta::mb_limiter::FFT_MESH_POINTS);
+                        dsp::pcomplex_mod(b->vTrOut, vTr, meta::mb_limiter::FFT_MESH_POINTS);
+
+                        // Update filter parameters, depending on operating mode
+                        if (bModern)
+                        {
+                            // Configure filter for band
+                            if (j <= 0)
+                            {
+                                fp.nType        = (nPlanSize > 1) ? dspu::FLT_BT_LRX_LOSHELF : dspu::FLT_BT_AMPLIFIER;
+                                fp.fFreq        = b->fFreqEnd;
+                                fp.fFreq2       = b->fFreqEnd;
+                            }
+                            else if (j >= (nPlanSize - 1))
+                            {
+                                fp.nType        = dspu::FLT_BT_LRX_HISHELF;
+                                fp.fFreq        = b->fFreqStart;
+                                fp.fFreq2       = b->fFreqStart;
+                            }
+                            else
+                            {
+                                fp.nType        = dspu::FLT_BT_LRX_LADDERPASS;
+                                fp.fFreq        = b->fFreqStart;
+                                fp.fFreq2       = b->fFreqEnd;
+                            }
+
+                            fp.fGain        = 1.0f;
+                            fp.nSlope       = 3;
+                            fp.fQuality     = 0.0;
+
+                            lsp_trace("Filter type=%d, from=%f, to=%f", int(fp.nType), fp.fFreq, fp.fFreq2);
+
+                            sFilters.set_params(b->nFilterID, &fp);
+                        }
+                        else
+                        {
+                            fp.fGain        = 1.0f;
+                            fp.nSlope       = 3;
+                            fp.fQuality     = 0.0;
+                            fp.fFreq        = b->fFreqEnd;
+                            fp.fFreq2       = b->fFreqEnd;
+
+                            // We're going from low frequencies to high frequencies
+                            if (j >= (nPlanSize - 1))
+                            {
+                                fp.nType    = dspu::FLT_NONE;
+                                b->sPassFilter.update(fSampleRate, &fp);
+                                b->sRejFilter.update(fSampleRate, &fp);
+                                b->sAllFilter.update(fSampleRate, &fp);
+                            }
+                            else
+                            {
+                                fp.nType    = dspu::FLT_BT_LRX_LOPASS;
+                                b->sPassFilter.update(fSampleRate, &fp);
+                                fp.nType    = dspu::FLT_BT_LRX_HIPASS;
+                                b->sRejFilter.update(fSampleRate, &fp);
+                                fp.nType    = (j == 0) ? dspu::FLT_NONE : dspu::FLT_BT_LRX_ALLPASS;
+                                b->sAllFilter.update(fSampleRate, &fp);
+                            }
+                        }
+                    }
+
+                    // Enable/disable all bands
+                    for (size_t j=0; j<meta::mb_limiter::BANDS_MAX; ++j)
+                    {
+                        band_t *b       = &c->vBands[j];
+                        sFilters.set_filter_active(b->nFilterID, b->bEnabled);
+                    }
+                } // nPlanSize
+
+                // TODO: Calculate latency
+//                for (size_t j=0; j<c->nPlanSize; ++j)
+//                {
+//                    comp_band_t *b  = c->vPlan[j];
+//                    latency         = lsp_max(latency, b->nLookahead);
+//                }
+            }
+
+            nEnvBoost           = env_boost;
+            bEnvUpdate          = false;
         }
 
         void mb_limiter::process(size_t samples)
         {
-            // TODO
+            // Bind input signal
+            for (size_t i=0; i<nChannels; ++i)
+            {
+                channel_t *c        = &vChannels[i];
+
+                c->vIn              = c->pIn->buffer<float>();
+                c->vOut             = c->pOut->buffer<float>();
+                c->vSc              = (c->pSc != NULL) ? c->pSc->buffer<float>() : c->vIn;
+            }
+
+            // Do main processing
+            for (size_t offset=0; offset < samples;)
+            {
+                // Compute number of samples to process
+                size_t count        = lsp_min(samples - offset, BUFFER_SIZE);
+
+                // Do main loop
+
+                // Update pointers
+                for (size_t i=0; i<nChannels; ++i)
+                {
+                    channel_t *c        = &vChannels[i];
+                    c->vIn             += count;
+                    c->vOut            += count;
+                    c->vSc             += count;
+                }
+                offset += samples;
+            }
+
+            // Output FFT graphs to the UI
+            output_fft_curves();
+
+            // Request for redraw
+            if (pWrapper != NULL)
+                pWrapper->query_display_draw();
+        }
+
+        void mb_limiter::output_fft_curves()
+        {
+            // Output filter curve for each band
+            for (size_t j=0; j<meta::mb_limiter::BANDS_MAX; ++j)
+            {
+                band_t *b           = &vChannels[0].vBands[j];
+
+                // FFT spectrogram
+                plug::mesh_t *mesh  = NULL;
+
+                // FFT curve
+                if (b->bSync)
+                {
+                    mesh                = (b->pBandGraph != NULL) ? b->pBandGraph->buffer<plug::mesh_t>() : NULL;
+                    if ((mesh != NULL) && (mesh->isEmpty()))
+                    {
+                        // Add extra points
+                        mesh->pvData[0][0] = SPEC_FREQ_MIN*0.5f;
+                        mesh->pvData[0][meta::mb_limiter::FFT_MESH_POINTS+1] = SPEC_FREQ_MAX * 2.0f;
+                        mesh->pvData[1][0] = 0.0f;
+                        mesh->pvData[1][meta::mb_limiter::FFT_MESH_POINTS+1] = 0.0f;
+
+                        // Fill mesh
+                        dsp::copy(&mesh->pvData[0][1], vFreqs, meta::mb_limiter::FFT_MESH_POINTS);
+                        dsp::mul_k3(&mesh->pvData[1][1], b->vTrOut, b->fPreamp, meta::mb_limiter::FFT_MESH_POINTS);
+                        mesh->data(2, meta::mb_limiter::FFT_MESH_POINTS + 2);
+
+                        // Mark mesh as synchronized
+                        b->bSync            = false;
+                    }
+                }
+            }
+
+            // Output FFT curves for each channel
+            for (size_t i=0; i<nChannels; ++i)
+            {
+                channel_t *c     = &vChannels[i];
+
+                // Calculate transfer function for the multiband processor
+                if (bModern)
+                {
+                    dsp::pcomplex_fill_ri(vTr, 1.0f, 0.0f, meta::mb_limiter::FFT_MESH_POINTS);
+
+                    // Calculate transfer function
+                    for (size_t j=0; j<nPlanSize; ++j)
+                    {
+                        band_t *b       = c->vPlan[j];
+                        sFilters.freq_chart(b->nFilterID, vTrTmp, vFreqs, b->fGainLevel, meta::mb_limiter::FFT_MESH_POINTS);
+                        dsp::pcomplex_mul2(vTr, vTrTmp, meta::mb_limiter::FFT_MESH_POINTS);
+                    }
+                }
+                else
+                {
+                    dsp::pcomplex_fill_ri(vTrTmp, 1.0f, 0.0f, meta::mb_limiter::FFT_MESH_POINTS);
+                    dsp::fill_zero(vTr, meta::mb_limiter::FFT_MESH_POINTS*2);
+
+                    // Calculate transfer function
+                    for (size_t j=0; j<nPlanSize; ++j)
+                    {
+                        band_t *b       = c->vPlan[j];
+
+                        // Apply all-pass characteristics
+                        b->sAllFilter.freq_chart(vFc, vFreqs, meta::mb_limiter::FFT_MESH_POINTS);
+                        dsp::pcomplex_mul2(vTr, vFc, meta::mb_limiter::FFT_MESH_POINTS);
+
+                        // Apply lo-pass filter characteristics
+                        b->sPassFilter.freq_chart(vFc, vFreqs, meta::mb_limiter::FFT_MESH_POINTS);
+                        dsp::pcomplex_mul2(vFc, vTrTmp, meta::mb_limiter::FFT_MESH_POINTS);
+                        dsp::fmadd_k3(vTr, vFc, b->fGainLevel, meta::mb_limiter::FFT_MESH_POINTS*2);
+
+                        // Apply hi-pass filter characteristics
+                        b->sRejFilter.freq_chart(vFc, vFreqs, meta::mb_limiter::FFT_MESH_POINTS);
+                        dsp::pcomplex_mul2(vTrTmp, vFc, meta::mb_limiter::FFT_MESH_POINTS);
+                    }
+                }
+                dsp::pcomplex_mod(c->vTrOut, vTr, meta::mb_limiter::FFT_MESH_POINTS);
+
+                // Output FFT curve for input
+                plug::mesh_t *mesh            = (c->pFftIn != NULL) ? c->pFftIn->buffer<plug::mesh_t>() : NULL;
+                if ((mesh != NULL) && (mesh->isEmpty()))
+                {
+                    if ((c->bFftIn) && (sAnalyzer.channel_active(c->nAnInChannel)))
+                    {
+                        // Copy frequency points
+                        dsp::copy(mesh->pvData[0], vFreqs, meta::mb_limiter::FFT_MESH_POINTS);
+                        sAnalyzer.get_spectrum(c->nAnInChannel, mesh->pvData[1], vIndexes, meta::mb_limiter::FFT_MESH_POINTS);
+
+                        // Mark mesh containing data
+                        mesh->data(2, meta::mb_limiter::FFT_MESH_POINTS);
+                    }
+                    else
+                        mesh->data(2, 0);
+                }
+
+                // Output FFT curve for output
+                mesh            = (c->pFftOut != NULL) ? c->pFftOut->buffer<plug::mesh_t>() : NULL;
+                if ((mesh != NULL) && (mesh->isEmpty()))
+                {
+                    if ((c->bFftOut) && (sAnalyzer.channel_active(c->nAnOutChannel)))
+                    {
+                        // Copy frequency points
+                        dsp::copy(mesh->pvData[0], vFreqs, meta::mb_limiter::FFT_MESH_POINTS);
+                        sAnalyzer.get_spectrum(c->nAnOutChannel, mesh->pvData[1], vIndexes, meta::mb_limiter::FFT_MESH_POINTS);
+
+                        // Mark mesh containing data
+                        mesh->data(2, meta::mb_limiter::FFT_MESH_POINTS);
+                    }
+                    else
+                        mesh->data(2, 0);
+                }
+
+//                // Output Channel curve
+//                mesh            = (c->pAmpGraph != NULL) ? c->pAmpGraph->buffer<plug::mesh_t>() : NULL;
+//                if ((mesh != NULL) && (mesh->isEmpty()))
+//                {
+//                    // Calculate amplitude (modulo)
+//                    dsp::copy(mesh->pvData[0], vFreqs, meta::mb_limiter::FFT_MESH_POINTS);
+//                    dsp::copy(mesh->pvData[1], c->vTrMem, meta::mb_limiter::FFT_MESH_POINTS);
+//                    mesh->data(2, meta::mb_limiter::FFT_MESH_POINTS);
+//                }
+            } // for channel
         }
 
         void mb_limiter::dump(dspu::IStateDumper *v) const

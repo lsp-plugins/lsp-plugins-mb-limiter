@@ -127,6 +127,10 @@ namespace lsp
                     const float            *vIn;                // Input data
                     const float            *vSc;                // Sidechain data
                     float                  *vOut;               // Output data
+                    float                  *vData;              // Intermediate buffer with processed data
+                    float                  *vInBuf;             // Oversampled input data buffer
+                    float                  *vScBuf;             // Oversampled sidechain data buffer
+                    float                  *vDataBuf;           // Oversampled buffer for processed data
                     float                  *vTrOut;             // Transfer function output
                     bool                    bFftIn;             // Output input FFT analysis
                     bool                    bFftOut;            // Output output FFT analysis
@@ -189,7 +193,15 @@ namespace lsp
 
             protected:
                 void                    output_fft_curves();
-                dspu::limiter_mode_t    decode_limiter_mode(ssize_t mode);
+                void                    perform_fft_analysis(size_t samples);
+                void                    oversample_data(size_t samples);
+                void                    downsample_data(size_t samples);
+
+            protected:
+                static dspu::limiter_mode_t     decode_limiter_mode(ssize_t mode);
+                static dspu::over_mode_t        decode_oversampling_mode(size_t mode);
+                static bool                     decode_filtering(size_t mode);
+                static size_t                   decode_dithering(size_t mode);
 
             public:
                 explicit mb_limiter(const meta::plugin_t *meta);

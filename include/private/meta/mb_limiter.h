@@ -103,6 +103,8 @@ namespace lsp
             static constexpr size_t REFRESH_RATE            = 20;
             static constexpr float  FREQ_BOOST_MIN          = 10.0f;
             static constexpr float  FREQ_BOOST_MAX          = 20000.0f;
+            static constexpr size_t OVERSAMPLING_MAX        = 8;        // Maximum 8x oversampling
+            static constexpr size_t FILTER_SLOPE            = 3;        // Filter slopeness
 
             enum oversampling_mode_t
             {

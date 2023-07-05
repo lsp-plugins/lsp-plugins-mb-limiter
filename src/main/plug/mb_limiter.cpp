@@ -823,6 +823,7 @@ namespace lsp
             dspu::over_mode_t over_mode = decode_oversampling_mode(ovs_mode);
             bool over_filtering         = decode_filtering(ovs_mode);
             size_t dither_bits          = decode_dithering(pDithering->value());
+            size_t real_sample_rate     = fSampleRate;
 
             // Configure channels (second pass)
             for (size_t i=0; i<nChannels; ++i)
@@ -864,7 +865,7 @@ namespace lsp
 
                     // Update settings for limiter
                     b->sLimit.set_mode(limiter_mode);
-                    b->sLimit.set_sample_rate(fSampleRate);  // TODO
+                    b->sLimit.set_sample_rate(real_sample_rate);
                     b->sLimit.set_lookahead(nLookahead);
                     b->sLimit.set_threshold(b->pThresh->value(), !boost);
                     b->sLimit.set_attack(b->pAttack->value());

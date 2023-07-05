@@ -22,7 +22,6 @@
 #ifndef PRIVATE_PLUGINS_MB_LIMITER_H_
 #define PRIVATE_PLUGINS_MB_LIMITER_H_
 
-#include <lsp-plug.in/dsp-units/ctl/Blink.h>
 #include <lsp-plug.in/dsp-units/ctl/Bypass.h>
 #include <lsp-plug.in/dsp-units/dynamics/Limiter.h>
 #include <lsp-plug.in/dsp-units/filters/DynamicFilters.h>
@@ -53,7 +52,6 @@ namespace lsp
                 typedef struct limiter_t
                 {
                     dspu::Limiter           sLimit;             // Limiter
-                    dspu::Blink             sBlink;             // Blink meter
 
                     bool                    bEnabled;           // Enabled flag
                     float                   fStereoLink;        // Stereo linking
@@ -87,10 +85,10 @@ namespace lsp
                     float                   fFreqStart;         // Start frequency of the band
                     float                   fFreqEnd;           // End frequency of the band
                     float                   fMakeup;            // Makeup gain
-                    float                   fGainLevel;         // Gain level
+                    float                   fReductionLevel;         // Gain level
 
                     float                  *vTrOut;             // Transfer function output
-                    float                  *vVCA;               // Voltage-controlled amplification value for each band
+                    float                  *vVcaBuf;            // Voltage-controlled amplification value for each band
 
                     size_t                  nFilterID;          // Identifier of the filter
 
@@ -118,6 +116,8 @@ namespace lsp
                     dspu::Oversampler       sOver;              // Oversampler object for signal
                     dspu::Oversampler       sScOver;            // Sidechain oversampler object for signal
                     dspu::Filter            sScBoost;           // Sidechain booster
+                    dspu::Delay             sDataDelayMB;       // Data delay for multi-band processing
+                    dspu::Delay             sDataDelaySB;       // Data delay for single-band processing
                     dspu::Delay             sDryDelay;          // Dry delay
 
                     band_t                  vBands[meta::mb_limiter::BANDS_MAX];    // Band processors
@@ -160,11 +160,13 @@ namespace lsp
                 float                   fInGain;            // Input gain
                 float                   fOutGain;           // Output gain
                 float                   fZoom;              // Zoom
-                size_t                  nOversampling;      // Oversampling
+                size_t                  nRealSampleRate;    // Real sample rate
                 size_t                  nEnvBoost;          // Envelope boosting
                 size_t                  nLookahead;         // Lookahead buffer size
 
                 channel_t              *vChannels;          // Channels
+                float                  *vTmpBuf;            // Temporary buffer
+                float                  *vEnvBuf;            // Temporary envelope buffer
                 uint32_t               *vIndexes;           // Analyzer FFT indexes
                 float                  *vFreqs;             // Analyzer FFT frequencies
                 float                  *vTr;                // Buffer for computing transfer function
@@ -192,10 +194,16 @@ namespace lsp
                 uint8_t                *pData;
 
             protected:
+                void                    output_meters();
                 void                    output_fft_curves();
                 void                    perform_fft_analysis(size_t samples);
                 void                    oversample_data(size_t samples);
+                void                    compute_multiband_vca_gain(channel_t *c, size_t samples);
+                void                    apply_multiband_vca_gain(channel_t *c, size_t samples);
+                void                    perform_(channel_t *c, size_t samples);
                 void                    downsample_data(size_t samples);
+
+                size_t                  decode_real_sample_rate(size_t mode);
 
             protected:
                 static dspu::limiter_mode_t     decode_limiter_mode(ssize_t mode);

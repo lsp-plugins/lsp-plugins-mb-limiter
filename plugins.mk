@@ -1,6 +1,6 @@
 #
-# Copyright (C) PLUGIN_ISSUE_YEAR Linux Studio Plugins Project <https://lsp-plug.in/>
-#           (C) PLUGIN_ISSUE_YEAR Vladimir Sadovnikov <sadko4u@gmail.com>
+# Copyright (C) 2023 Linux Studio Plugins Project <https://lsp-plug.in/>
+#           (C) 2023 Vladimir Sadovnikov <sadko4u@gmail.com>
 #
 # This file is part of lsp-plugins-mb-limiter
 #

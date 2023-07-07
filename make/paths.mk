@@ -1,21 +1,21 @@
 #
-# Copyright (C) PLUGIN_ISSUE_YEAR Linux Studio Plugins Project <https://lsp-plug.in/>
-#           (C) PLUGIN_ISSUE_YEAR Vladimir Sadovnikov <sadko4u@gmail.com>
+# Copyright (C) 2023 Linux Studio Plugins Project <https://lsp-plug.in/>
+#           (C) 2023 Vladimir Sadovnikov <sadko4u@gmail.com>
 #
-# This file is part of lsp-plugins-plugin-template
+# This file is part of lsp-plugins-mb-limiter
 #
-# lsp-plugins-plugin-template is free software: you can redistribute it and/or modify
+# lsp-plugins-mb-limiter is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Lesser General Public License as published by
 # the Free Software Foundation, either version 3 of the License, or
 # any later version.
 #
-# lsp-plugins-plugin-template is distributed in the hope that it will be useful,
+# lsp-plugins-mb-limiter is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU Lesser General Public License for more details.
 #
 # You should have received a copy of the GNU Lesser General Public License
-# along with lsp-plugins-plugin-template.  If not, see <https://www.gnu.org/licenses/>.
+# along with lsp-plugins-mb-limiter.  If not, see <https://www.gnu.org/licenses/>.
 #
 
 # Installation prefix

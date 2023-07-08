@@ -14,15 +14,17 @@
 					</ui:for>
 					<marker v="20000"/>
 					<ui:with ox="1" oy="0">
+						<marker v="+36 db"/>
+						<marker v="+24 db"/>
 						<marker v="+12 db"/>
 						<marker v="-12 db"/>
 						<marker v="-36 db"/>
 						<marker v="-60 db"/>
 
-						<ui:for id="g" first="-42" last="6" step="12">
+						<ui:for id="g" first="-42" last="18" step="12">
 							<marker v="${g} db" visibility=":zoom le -9 db"/>
 						</ui:for>
-						<ui:for id="g" first="-21" last="3" step="6">
+						<ui:for id="g" first="-21" last="9" step="6">
 							<marker v="${g} db" visibility=":zoom le -15 db"/>
 						</ui:for>
 					</ui:with>
@@ -93,7 +95,7 @@
 
 				<!-- Axis -->
 				<axis min="10" max="24000" angle="0.0" log="true" visibility="false"/>
-				<axis min="-72 db / (:zoom ** 3)" max="24 db * :zoom" color="graph_prim" angle="0.5" log="true"/>
+				<axis min="-72 db / (:zoom ** 3)" max="48 db * (:zoom ** 2)" color="graph_prim" angle="0.5" log="true"/>
 				<axis min="-1" max="1" visibility="false" angle="0.5"/>
 
 				<!-- Text -->
@@ -115,14 +117,14 @@
 				</ui:with>
 
 				<ui:with x="10" halign="1" valign="1">
-					<ui:for id="g" first="-60" last="12" step="12">
+					<ui:for id="g" first="-60" last="48" step="12">
 						<text y="${g} db" text="${g}"/>
 					</ui:for>
 					<text y="0 db" ox="0" oy="2" text="graph.units.db" valign="-1"/>
-					<ui:for id="g" first="-42" last="6" step="12">
+					<ui:for id="g" first="-42" last="18" step="12">
 						<text y="${g} db" text="${g}" visibility=":zoom le -9 db"/>
 					</ui:for>
-					<ui:for id="g" first="-21" last="3" step="6">
+					<ui:for id="g" first="-21" last="9" step="6">
 						<text y="${g} db" text="${g}" visibility=":zoom le -15 db"/>
 					</ui:for>
 				</ui:with>
@@ -303,9 +305,15 @@
 						<knob id="bsl_${i}" />
 						<knob id="bmk_${i}" />
 						<cell rows="2">
-							<ledmeter>
-								<ledchannel id="rlm_l" min="-72 db" max="12 db" log="true" type="rms_peak" peak.visibility="true" value.color="left"/>
-								<ledchannel id="rlm_r" min="-72 db" max="12 db" log="true" type="rms_peak" peak.visibility="true" value.color="right"/>
+							<ledmeter height.min="192">
+								<ledchannel
+									id="rlm_${i}l" min="-48 db" max="0 db" log="true"
+									balance="0 db" balance.visibility="true" type="peak"
+									peak.visibility="true" value.color="left" />
+								<ledchannel
+									id="rlm_${i}r" min="-48 db" max="0 db" log="true"
+									balance="0 db" balance.visibility="true" type="peak"
+									peak.visibility="true" value.color="right" />
 							</ledmeter>
 						</cell>
 						

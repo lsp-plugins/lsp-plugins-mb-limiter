@@ -55,6 +55,7 @@ namespace lsp
 
                     bool                    bEnabled;           // Enabled flag
                     float                   fStereoLink;        // Stereo linking
+                    float                   fReductionLevel;    // Gain reduction level
 
                     plug::IPort            *pEnable;            // Enable
                     plug::IPort            *pAlrOn;             // Automatic level regulation
@@ -71,21 +72,23 @@ namespace lsp
                     plug::IPort            *pReductionMeter;    // Reduction gain meter
                 } limiter_t;
 
-                typedef struct band_t: public limiter_t
+                typedef struct band_t
                 {
                     dspu::Equalizer         sEq;                // Sidechain equalizer
                     dspu::Filter            sPassFilter;        // Passing filter for 'classic' mode
                     dspu::Filter            sRejFilter;         // Rejection filter for 'classic' mode
                     dspu::Filter            sAllFilter;         // All-pass filter for phase compensation
 
+                    limiter_t               sLimiter;           // Limiter
+
                     bool                    bSync;              // Synchronization request
                     bool                    bMute;              // Mute channel
                     bool                    bSolo;              // Solo channel
+                    bool                    bEnabled;           // Band is enabled
                     float                   fPreamp;            // Sidechain pre-amplification
                     float                   fFreqStart;         // Start frequency of the band
                     float                   fFreqEnd;           // End frequency of the band
                     float                   fMakeup;            // Makeup gain
-                    float                   fReductionLevel;    // Gain reduction level
 
                     float                  *vTrOut;             // Transfer function output
                     float                  *vVcaBuf;            // Voltage-controlled amplification value for each band
@@ -194,9 +197,10 @@ namespace lsp
                 void                    perform_fft_analysis(size_t samples);
                 void                    oversample_data(size_t samples);
                 void                    compute_multiband_vca_gain(channel_t *c, size_t samples);
+                void                    process_multiband_stereo_link(size_t samples);
                 void                    apply_multiband_vca_gain(channel_t *c, size_t samples);
-                void                    perform_(channel_t *c, size_t samples);
                 void                    downsample_data(size_t samples);
+                void                    perform_stereo_link(float *cl, float *cr, float link, size_t samples);
 
                 size_t                  decode_real_sample_rate(size_t mode);
 

@@ -1,6 +1,5 @@
 {
 	"mb_limiter": {
-		"classic": "Classic",
 		"mode": {
 	        "exp_duck": "Exp Duck",
 	        "exp_tail": "Exp Tail",
@@ -16,8 +15,7 @@
 	        "line_tail": "Line Tail",
 	        "line_thin": "Line Thin",
 	        "line_wide": "Line Wide"
-		},		
-		"modern": "Modern"
+		}
 	}
 }
 

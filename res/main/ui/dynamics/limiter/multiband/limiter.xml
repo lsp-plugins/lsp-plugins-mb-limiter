@@ -224,8 +224,6 @@
 		<!-- Row 2: bottom line -->
 		<align halign="-1" vreduce="true">
 			<hbox spacing="4" vreduce="true" bg.color="bg_schema" pad.h="6">
-				<label text="labels.mode:"/>
-				<combo id="mode" pad.r="8" pad.v="4"/>
 				<label text="labels.sc_boost:"/>
 				<combo id="envb" pad.r="8"/>
 				<label text="labels.oversampling:"/>

@@ -85,12 +85,10 @@ namespace lsp
                     float                   fFreqStart;         // Start frequency of the band
                     float                   fFreqEnd;           // End frequency of the band
                     float                   fMakeup;            // Makeup gain
-                    float                   fReductionLevel;         // Gain level
+                    float                   fReductionLevel;    // Gain reduction level
 
                     float                  *vTrOut;             // Transfer function output
                     float                  *vVcaBuf;            // Voltage-controlled amplification value for each band
-
-                    size_t                  nFilterID;          // Identifier of the filter
 
                     plug::IPort            *pFreqEnd;           // Frequency range end
                     plug::IPort            *pSolo;              // Solo switch
@@ -151,11 +149,9 @@ namespace lsp
 
             protected:
                 dspu::Analyzer          sAnalyzer;          // Analyzer
-                dspu::DynamicFilters    sFilters;           // Dynamic filters for each band in 'modern' mode
                 size_t                  nChannels;          // Number of channels
                 bool                    bSidechain;         // Sidechain switch is present
                 bool                    bExtSc;             // External sidechain turned on
-                bool                    bModern;            // Modern mode
                 bool                    bEnvUpdate;         // Request for envelope update
                 float                   fInGain;            // Input gain
                 float                   fOutGain;           // Output gain
@@ -182,7 +178,6 @@ namespace lsp
                 plug::IPort            *pInGain;            // Input gain
                 plug::IPort            *pOutGain;           // Output gain
                 plug::IPort            *pLookahead;         // Lookahead time
-                plug::IPort            *pMode;              // Mode
                 plug::IPort            *pOversampling;      // Oversampling
                 plug::IPort            *pDithering;         // Dithering
                 plug::IPort            *pEnvBoost;          // Envelope boost

@@ -79,6 +79,11 @@ namespace lsp
             static constexpr float  THRESHOLD_DFL           = GAIN_AMP_0_DB;
             static constexpr float  THRESHOLD_STEP          = 0.01f;
 
+            static constexpr float  MAKEUP_MIN              = GAIN_AMP_M_48_DB;
+            static constexpr float  MAKEUP_MAX              = GAIN_AMP_P_48_DB;
+            static constexpr float  MAKEUP_DFL              = GAIN_AMP_0_DB;
+            static constexpr float  MAKEUP_STEP             = 0.01f;
+
             static constexpr float  KNEE_MIN                = GAIN_AMP_M_12_DB;
             static constexpr float  KNEE_MAX                = GAIN_AMP_P_12_DB;
             static constexpr float  KNEE_DFL                = GAIN_AMP_0_DB;
@@ -104,7 +109,7 @@ namespace lsp
             static constexpr float  FREQ_BOOST_MIN          = 10.0f;
             static constexpr float  FREQ_BOOST_MAX          = 20000.0f;
             static constexpr size_t OVERSAMPLING_MAX        = 8;        // Maximum 8x oversampling
-            static constexpr size_t FILTER_SLOPE            = 3;        // Filter slopeness
+            static constexpr size_t FILTER_SLOPE            = 4;        // Filter slopeness
 
             enum oversampling_mode_t
             {

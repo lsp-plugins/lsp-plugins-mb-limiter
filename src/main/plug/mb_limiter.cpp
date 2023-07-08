@@ -76,7 +76,6 @@ namespace lsp
                 bSidechain      = true;
 
             bExtSc              = false;
-            bModern             = true;
             bEnvUpdate          = true;
             fInGain             = GAIN_AMP_0_DB;
             fOutGain            = GAIN_AMP_0_DB;
@@ -114,7 +113,6 @@ namespace lsp
             pInGain             = NULL;
             pOutGain            = NULL;
             pLookahead          = NULL;
-            pMode               = NULL;
             pOversampling       = NULL;
             pDithering          = NULL;
             pEnvBoost           = NULL;
@@ -152,11 +150,11 @@ namespace lsp
                 szof_fft_graph * 2 +            // vTrTmp
                 szof_fft_graph * 2 +            // vFc
                 nChannels * (
-                    szof_fft_graph +            // vTrOut
                     szof_buf +                  // vData
                     szof_ovs_buf +              // vInBuf
                     szof_ovs_buf +              // vScBuf
                     szof_ovs_buf +              // vDataBuf
+                    szof_fft_graph +            // vTrOut
                     meta::mb_limiter::BANDS_MAX * (
                         szof_fft_graph +        // vTrOut
                         szof_ovs_buf            // vVcaBuf
@@ -172,11 +170,6 @@ namespace lsp
             sAnalyzer.set_envelope(dspu::envelope::WHITE_NOISE);
             sAnalyzer.set_window(meta::mb_limiter::FFT_WINDOW);
             sAnalyzer.set_rate(meta::mb_limiter::REFRESH_RATE);
-
-            // Initialize filters according to number of bands
-            if (sFilters.init(meta::mb_limiter::BANDS_MAX * nChannels) != STATUS_OK)
-                return;
-            size_t filter_cid = 0;
 
             // Allocate data
             uint8_t *ptr            = alloc_aligned<uint8_t>(pData, to_alloc);
@@ -296,8 +289,6 @@ namespace lsp
                     b->vVcaBuf          = reinterpret_cast<float *>(ptr);
                     ptr                += szof_ovs_buf;
 
-                    b->nFilterID        = filter_cid++;
-
                     b->pFreqEnd         = NULL;
                     b->pSolo            = NULL;
                     b->pMute            = NULL;
@@ -376,7 +367,6 @@ namespace lsp
             pInGain             = TRACE_PORT(ports[port_id++]);
             pOutGain            = TRACE_PORT(ports[port_id++]);
             pLookahead          = TRACE_PORT(ports[port_id++]);
-            pMode               = TRACE_PORT(ports[port_id++]);
             pOversampling       = TRACE_PORT(ports[port_id++]);
             pDithering          = TRACE_PORT(ports[port_id++]);
             pEnvBoost           = TRACE_PORT(ports[port_id++]);
@@ -523,7 +513,6 @@ namespace lsp
 
             // Destroy processors
             sAnalyzer.destroy();
-            sFilters.destroy();
 
             // Destroy channels
             if (vChannels != NULL)
@@ -537,6 +526,8 @@ namespace lsp
                     c->sOver.destroy();
                     c->sScOver.destroy();
                     c->sScBoost.destroy();
+                    c->sDataDelayMB.destroy();
+                    c->sDataDelaySB.destroy();
                     c->sDryDelay.destroy();
 
                     // Destroy bands
@@ -571,7 +562,6 @@ namespace lsp
         {
             // Update analyzer's sample rate
             sAnalyzer.set_sample_rate(sr);
-            sFilters.set_sample_rate(sr);
 
             // Update channels
             for (size_t i=0; i<nChannels; ++i)
@@ -752,14 +742,6 @@ namespace lsp
                 }
                 nRealSampleRate     = real_srate;
                 rebuild_bands       = true;
-            }
-
-            // Determine work mode: classic or modern
-            bool modern         = pMode->value() >= 0.5f;
-            if (modern != bModern)
-            {
-                bModern             = modern;
-                rebuild_bands       = true;     // Force to rebuild plan
             }
 
             // Store gain
@@ -947,8 +929,6 @@ namespace lsp
             }
 
             // Configure channels (third pass)
-            sFilters.set_sample_rate(nRealSampleRate);
-
             for (size_t i=0; i<nChannels; ++i)
             {
                 channel_t *c    = &vChannels[i];
@@ -992,7 +972,7 @@ namespace lsp
                         // Check that band is enabled
                         b->bSync        = true;
                         b->fFreqEnd     = (j < (nPlanSize - 1)) ? c->vPlan[j+1]->fFreqStart : fSampleRate >> 1;
-                        lsp_trace("[%d]: %f - %f", int(j), b->fFreqStart, b->fFreqEnd);
+//                        lsp_trace("[%d]: %f - %f", int(j), b->fFreqStart, b->fFreqEnd);
                         b->pFreqEnd->set_value(b->fFreqEnd);
 
                         // Configure lo-pass sidechain filter
@@ -1021,74 +1001,34 @@ namespace lsp
                         b->sEq.freq_chart(vTr, vFreqs, meta::mb_limiter::FFT_MESH_POINTS);
                         dsp::pcomplex_mod(b->vTrOut, vTr, meta::mb_limiter::FFT_MESH_POINTS);
 
-                        // Update filter parameters, depending on operating mode
-                        if (bModern)
+                        // Update filter parameters
+                        fp.fGain        = 1.0f;
+                        fp.nSlope       = meta::mb_limiter::FILTER_SLOPE;
+                        fp.fQuality     = 0.0f;
+                        fp.fFreq        = b->fFreqEnd;
+                        fp.fFreq2       = b->fFreqEnd;
+
+                        // We're going from low frequencies to high frequencies
+                        if (j >= (nPlanSize - 1))
                         {
-                            // Configure filter for band
-                            if (j <= 0)
-                            {
-                                fp.nType        = (nPlanSize > 1) ? dspu::FLT_BT_LRX_LOSHELF : dspu::FLT_BT_AMPLIFIER;
-                                fp.fFreq        = b->fFreqEnd;
-                                fp.fFreq2       = b->fFreqEnd;
-                            }
-                            else if (j >= (nPlanSize - 1))
-                            {
-                                fp.nType        = dspu::FLT_BT_LRX_HISHELF;
-                                fp.fFreq        = b->fFreqStart;
-                                fp.fFreq2       = b->fFreqStart;
-                            }
-                            else
-                            {
-                                fp.nType        = dspu::FLT_BT_LRX_LADDERPASS;
-                                fp.fFreq        = b->fFreqStart;
-                                fp.fFreq2       = b->fFreqEnd;
-                            }
-
-                            fp.fGain        = 1.0f;
-                            fp.nSlope       = meta::mb_limiter::FILTER_SLOPE;
-                            fp.fQuality     = 0.0;
-
-                            lsp_trace("Filter type=%d, from=%f, to=%f", int(fp.nType), fp.fFreq, fp.fFreq2);
-
-                            sFilters.set_params(b->nFilterID, &fp);
+                            fp.nType    = dspu::FLT_NONE;
+                            b->sPassFilter.update(fSampleRate, &fp);
+                            b->sRejFilter.update(fSampleRate, &fp);
+                            b->sAllFilter.update(fSampleRate, &fp);
                         }
                         else
                         {
-                            fp.fGain        = 1.0f;
-                            fp.nSlope       = meta::mb_limiter::FILTER_SLOPE;
-                            fp.fQuality     = 0.0;
-                            fp.fFreq        = b->fFreqEnd;
-                            fp.fFreq2       = b->fFreqEnd;
-
-                            // We're going from low frequencies to high frequencies
-                            if (j >= (nPlanSize - 1))
-                            {
-                                fp.nType    = dspu::FLT_NONE;
-                                b->sPassFilter.update(fSampleRate, &fp);
-                                b->sRejFilter.update(fSampleRate, &fp);
-                                b->sAllFilter.update(fSampleRate, &fp);
-                            }
-                            else
-                            {
-                                fp.nType    = dspu::FLT_BT_LRX_LOPASS;
-                                b->sPassFilter.update(fSampleRate, &fp);
-                                fp.nType    = dspu::FLT_BT_LRX_HIPASS;
-                                b->sRejFilter.update(fSampleRate, &fp);
-                                fp.nType    = (j == 0) ? dspu::FLT_NONE : dspu::FLT_BT_LRX_ALLPASS;
-                                b->sAllFilter.update(fSampleRate, &fp);
-                            }
-
-                            b->sPassFilter.set_sample_rate(nRealSampleRate);
-                            b->sRejFilter.set_sample_rate(nRealSampleRate);
-                            b->sAllFilter.set_sample_rate(nRealSampleRate);
+                            fp.nType    = dspu::FLT_BT_LRX_LOPASS;
+                            b->sPassFilter.update(fSampleRate, &fp);
+                            fp.nType    = dspu::FLT_BT_LRX_HIPASS;
+                            b->sRejFilter.update(fSampleRate, &fp);
+                            fp.nType    = (j == 0) ? dspu::FLT_NONE : dspu::FLT_BT_LRX_ALLPASS;
+                            b->sAllFilter.update(fSampleRate, &fp);
                         }
-                    }
 
-                    // Enable/disable all bands
-                    for (size_t j=0; j<meta::mb_limiter::BANDS_MAX; ++j)
-                    {
-                        band_t *b       = &c->vBands[j];
-                        sFilters.set_filter_active(b->nFilterID, b->bEnabled);
+                        b->sPassFilter.set_sample_rate(nRealSampleRate);
+                        b->sRejFilter.set_sample_rate(nRealSampleRate);
+                        b->sAllFilter.set_sample_rate(nRealSampleRate);
                     }
                 } // nPlanSize
 
@@ -1142,34 +1082,20 @@ namespace lsp
             size_t ovs_samples = samples * vChannels[0].sScOver.get_oversampling();
 
             // Here, we apply VCA to input signal dependent on the input
-            if (bModern) // 'Modern' mode
+            // Apply delay to compensate lookahead feature
+            c->sDataDelayMB.process(vTmpBuf, c->vInBuf, ovs_samples);
+
+            // Originally, there is no signal
+            dsp::fill_zero(c->vDataBuf, ovs_samples);           // Clear the channel data buffer
+
+            for (size_t j=0; j<nPlanSize; ++j)
             {
-                // Apply delay to compensate lookahead feature
-                c->sDataDelayMB.process(c->vDataBuf, c->vInBuf, ovs_samples);
+                band_t *b       = c->vPlan[j];
 
-                for (size_t j=0; j<nPlanSize; ++j)
-                {
-                    band_t *b       = c->vPlan[j];
-                    sFilters.process(b->nFilterID, c->vDataBuf, c->vInBuf, b->vVcaBuf, ovs_samples);
-                }
-            }
-            else // 'Classic' mode
-            {
-                // Apply delay to compensate lookahead feature
-                c->sDataDelayMB.process(vTmpBuf, c->vInBuf, ovs_samples);
-
-                // Originally, there is no signal
-                dsp::fill_zero(c->vDataBuf, ovs_samples);           // Clear the channel data buffer
-
-                for (size_t j=0; j<nPlanSize; ++j)
-                {
-                    band_t *b       = c->vPlan[j];
-
-                    b->sAllFilter.process(c->vDataBuf, c->vDataBuf, ovs_samples);   // Process the signal with all-pass
-                    b->sPassFilter.process(vEnvBuf, vTmpBuf, ovs_samples);          // Filter frequencies from input
-                    dsp::fmadd3(c->vDataBuf, vEnvBuf, b->vVcaBuf, ovs_samples);     // Apply VCA gain to band and add to output data buffer
-                    b->sRejFilter.process(vTmpBuf, vTmpBuf, ovs_samples);           // Filter frequencies from input
-                }
+                b->sAllFilter.process(c->vDataBuf, c->vDataBuf, ovs_samples);   // Process the signal with all-pass
+                b->sPassFilter.process(vEnvBuf, vTmpBuf, ovs_samples);          // Filter frequencies from input
+                dsp::fmadd3(c->vDataBuf, vEnvBuf, b->vVcaBuf, ovs_samples);     // Apply VCA gain to band and add to output data buffer
+                b->sRejFilter.process(vTmpBuf, vTmpBuf, ovs_samples);           // Filter frequencies from input
             }
         }
 
@@ -1204,6 +1130,13 @@ namespace lsp
                     apply_multiband_vca_gain(&vChannels[i], count);
                 downsample_data(count);
                 perform_fft_analysis(count);
+
+                // Output audio
+                for (size_t i=0; i<nChannels; ++i)
+                {
+                    channel_t *c        = &vChannels[i];
+                    dsp::copy(c->vOut, c->vData, count);
+                }
 
                 // Update pointers
                 for (size_t i=0; i<nChannels; ++i)
@@ -1329,42 +1262,27 @@ namespace lsp
             {
                 channel_t *c     = &vChannels[i];
 
-                // Calculate transfer function for the multiband processor
-                if (bModern)
+                // Calculate transfer function
+                dsp::pcomplex_fill_ri(vTrTmp, 1.0f, 0.0f, meta::mb_limiter::FFT_MESH_POINTS);
+                dsp::fill_zero(vTr, meta::mb_limiter::FFT_MESH_POINTS*2);
+
+                // Calculate transfer function
+                for (size_t j=0; j<nPlanSize; ++j)
                 {
-                    dsp::pcomplex_fill_ri(vTr, 1.0f, 0.0f, meta::mb_limiter::FFT_MESH_POINTS);
+                    band_t *b       = c->vPlan[j];
 
-                    // Calculate transfer function
-                    for (size_t j=0; j<nPlanSize; ++j)
-                    {
-                        band_t *b       = c->vPlan[j];
-                        sFilters.freq_chart(b->nFilterID, vTrTmp, vFreqs, b->fReductionLevel, meta::mb_limiter::FFT_MESH_POINTS);
-                        dsp::pcomplex_mul2(vTr, vTrTmp, meta::mb_limiter::FFT_MESH_POINTS);
-                    }
-                }
-                else
-                {
-                    dsp::pcomplex_fill_ri(vTrTmp, 1.0f, 0.0f, meta::mb_limiter::FFT_MESH_POINTS);
-                    dsp::fill_zero(vTr, meta::mb_limiter::FFT_MESH_POINTS*2);
+                    // Apply all-pass characteristics
+                    b->sAllFilter.freq_chart(vFc, vFreqs, meta::mb_limiter::FFT_MESH_POINTS);
+                    dsp::pcomplex_mul2(vTr, vFc, meta::mb_limiter::FFT_MESH_POINTS);
 
-                    // Calculate transfer function
-                    for (size_t j=0; j<nPlanSize; ++j)
-                    {
-                        band_t *b       = c->vPlan[j];
+                    // Apply lo-pass filter characteristics
+                    b->sPassFilter.freq_chart(vFc, vFreqs, meta::mb_limiter::FFT_MESH_POINTS);
+                    dsp::pcomplex_mul2(vFc, vTrTmp, meta::mb_limiter::FFT_MESH_POINTS);
+                    dsp::fmadd_k3(vTr, vFc, b->fReductionLevel, meta::mb_limiter::FFT_MESH_POINTS*2);
 
-                        // Apply all-pass characteristics
-                        b->sAllFilter.freq_chart(vFc, vFreqs, meta::mb_limiter::FFT_MESH_POINTS);
-                        dsp::pcomplex_mul2(vTr, vFc, meta::mb_limiter::FFT_MESH_POINTS);
-
-                        // Apply lo-pass filter characteristics
-                        b->sPassFilter.freq_chart(vFc, vFreqs, meta::mb_limiter::FFT_MESH_POINTS);
-                        dsp::pcomplex_mul2(vFc, vTrTmp, meta::mb_limiter::FFT_MESH_POINTS);
-                        dsp::fmadd_k3(vTr, vFc, b->fReductionLevel, meta::mb_limiter::FFT_MESH_POINTS*2);
-
-                        // Apply hi-pass filter characteristics
-                        b->sRejFilter.freq_chart(vFc, vFreqs, meta::mb_limiter::FFT_MESH_POINTS);
-                        dsp::pcomplex_mul2(vTrTmp, vFc, meta::mb_limiter::FFT_MESH_POINTS);
-                    }
+                    // Apply hi-pass filter characteristics
+                    b->sRejFilter.freq_chart(vFc, vFreqs, meta::mb_limiter::FFT_MESH_POINTS);
+                    dsp::pcomplex_mul2(vTrTmp, vFc, meta::mb_limiter::FFT_MESH_POINTS);
                 }
                 dsp::pcomplex_mod(c->vTrOut, vTr, meta::mb_limiter::FFT_MESH_POINTS);
 

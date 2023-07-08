@@ -40,13 +40,6 @@ namespace lsp
     {
         //-------------------------------------------------------------------------
         // Plugin metadata
-        static const port_item_t limiter_split_modes[] =
-        {
-            { "Classic",        "mb_limiter.classic"    },
-            { "Modern",         "mb_limiter.modern"     },
-            { NULL, NULL }
-        };
-
         static port_item_t limiter_oper_modes[] =
         {
             { "Herm Thin",      "mb_limiter.mode.herm_thin"     },
@@ -125,7 +118,6 @@ namespace lsp
             IN_GAIN, \
             OUT_GAIN, \
             LOG_CONTROL("lk", "Lookahead", U_MSEC, mb_limiter::LOOKAHEAD), \
-            COMBO("mode", "Operating mode", 1, limiter_split_modes), \
             COMBO("ovs", "Oversampling", mb_limiter::OVS_DEFAULT, limiter_ovs_modes), \
             COMBO("dither", "Dithering", mb_limiter::DITHER_DEFAULT, limiter_dither_modes), \
             COMBO("envb", "Envelope boost", mb_limiter::FB_DEFAULT, limiter_sc_boost), \
@@ -172,7 +164,7 @@ namespace lsp
             SWITCH("bs" id, "Solo band" label, 0.0f), \
             SWITCH("bm" id, "Mute band" label, 0.0f), \
             AMP_GAIN100("bpa" id, "Band preamp" label, GAIN_AMP_0_DB), \
-            AMP_GAIN100("bmk" id, "Band makeup" label, GAIN_AMP_0_DB), \
+            LOG_CONTROL("bmk" id, "Band makeup" label, U_GAIN_AMP, mb_limiter::MAKEUP), \
             MESH("bfc" id, "Band filter chart" label, 2, mb_limiter::FFT_MESH_POINTS + 2), \
             MBL_LIMITER(id, label)
 

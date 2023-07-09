@@ -155,6 +155,7 @@ namespace lsp
                     szof_ovs_buf +              // vScBuf
                     szof_ovs_buf +              // vDataBuf
                     szof_fft_graph +            // vTrOut
+                    szof_ovs_buf +              // vVcaBuf
                     meta::mb_limiter::BANDS_MAX * (
                         szof_fft_graph +        // vTrOut
                         szof_ovs_buf            // vVcaBuf
@@ -229,82 +230,20 @@ namespace lsp
                 if (!c->sDryDelay.init(dspu::millis_to_samples(MAX_SAMPLE_RATE, lk_latency*2 + c->sOver.max_latency())))
                     return;
 
-                // Init bands
-                for (size_t j=0; j<meta::mb_limiter::BANDS_MAX; ++j)
-                {
-                    band_t *b   = &c->vBands[j];
-
-                    // band_t
-                    b->sEq.construct();
-                    b->sPassFilter.construct();
-                    b->sRejFilter.construct();
-                    b->sAllFilter.construct();
-
-                    // Initialize filters and equalizers
-                    if (!b->sEq.init(2, 0))
-                        return;
-                    if (!b->sPassFilter.init(NULL))
-                        return;
-                    if (!b->sRejFilter.init(NULL))
-                        return;
-                    if (!b->sAllFilter.init(NULL))
-                        return;
-                    b->sEq.set_mode(dspu::EQM_IIR);
-
-                    b->bSync            = false;
-                    b->bMute            = false;
-                    b->bSolo            = false;
-                    b->fPreamp          = GAIN_AMP_0_DB;
-                    b->fFreqStart       = 0.0f;
-                    b->fFreqEnd         = 0.0f;
-                    b->fMakeup          = GAIN_AMP_0_DB;
-
-                    b->vTrOut           = reinterpret_cast<float *>(ptr);
-                    ptr                += szof_fft_graph;
-                    b->vVcaBuf          = reinterpret_cast<float *>(ptr);
-                    ptr                += szof_ovs_buf;
-
-                    b->pFreqEnd         = NULL;
-                    b->pSolo            = NULL;
-                    b->pMute            = NULL;
-                    b->pPreamp          = NULL;
-                    b->pMakeup          = NULL;
-                    b->pBandGraph       = NULL;
-
-                    // limiter_t
-                    limiter_t *l        = &b->sLimiter;
-                    l->sLimit.construct();
-
-                    // Initialize limiter with latency compensation gap
-                    if (!l->sLimit.init(MAX_SAMPLE_RATE * meta::mb_limiter::OVERSAMPLING_MAX, lk_latency))
-                        return;
-
-                    l->bEnabled         = false;
-                    l->fStereoLink      = 0.0f;
-                    l->fReductionLevel  = GAIN_AMP_0_DB;
-
-                    l->pEnable          = NULL;
-                    l->pAlrOn           = NULL;
-                    l->pAlrAttack       = NULL;
-                    l->pAlrRelease      = NULL;
-                    l->pAlrKnee         = NULL;
-
-                    l->pMode            = NULL;
-                    l->pThresh          = NULL;
-                    l->pBoost           = NULL;
-                    l->pAttack          = NULL;
-                    l->pRelease         = NULL;
-                    l->pStereoLink      = NULL;
-                    l->pReductionMeter  = NULL;
-                }
-
                 // Init main limiter
                 limiter_t *l    = &c->sLimiter;
 
                 l->sLimit.construct();
 
+                // Initialize limiter with latency compensation gap
+                if (!l->sLimit.init(MAX_SAMPLE_RATE * meta::mb_limiter::OVERSAMPLING_MAX, lk_latency))
+                    return;
+
                 l->bEnabled         = false;
                 l->fStereoLink      = 0.0f;
+                l->fReductionLevel  = GAIN_AMP_0_DB;
+                l->vVcaBuf          = reinterpret_cast<float *>(ptr);
+                ptr                += szof_ovs_buf;
 
                 l->pEnable          = NULL;
                 l->pAlrOn           = NULL;
@@ -350,6 +289,75 @@ namespace lsp
                 c->pFftIn           = NULL;
                 c->pFftOut          = NULL;
                 c->pFilterGraph     = NULL;
+
+                // Init bands
+                for (size_t j=0; j<meta::mb_limiter::BANDS_MAX; ++j)
+                {
+                    band_t *b   = &c->vBands[j];
+
+                    // band_t
+                    b->sEq.construct();
+                    b->sPassFilter.construct();
+                    b->sRejFilter.construct();
+                    b->sAllFilter.construct();
+
+                    // Initialize filters and equalizers
+                    if (!b->sEq.init(2, 0))
+                        return;
+                    if (!b->sPassFilter.init(NULL))
+                        return;
+                    if (!b->sRejFilter.init(NULL))
+                        return;
+                    if (!b->sAllFilter.init(NULL))
+                        return;
+                    b->sEq.set_mode(dspu::EQM_IIR);
+
+                    b->bSync            = false;
+                    b->bMute            = false;
+                    b->bSolo            = false;
+                    b->fPreamp          = GAIN_AMP_0_DB;
+                    b->fFreqStart       = 0.0f;
+                    b->fFreqEnd         = 0.0f;
+                    b->fMakeup          = GAIN_AMP_0_DB;
+
+                    b->vTrOut           = reinterpret_cast<float *>(ptr);
+                    ptr                += szof_fft_graph;
+
+                    b->pFreqEnd         = NULL;
+                    b->pSolo            = NULL;
+                    b->pMute            = NULL;
+                    b->pPreamp          = NULL;
+                    b->pMakeup          = NULL;
+                    b->pBandGraph       = NULL;
+
+                    // limiter_t
+                    limiter_t *l        = &b->sLimiter;
+                    l->sLimit.construct();
+
+                    // Initialize limiter with latency compensation gap
+                    if (!l->sLimit.init(MAX_SAMPLE_RATE * meta::mb_limiter::OVERSAMPLING_MAX, lk_latency))
+                        return;
+
+                    l->bEnabled         = false;
+                    l->fStereoLink      = 0.0f;
+                    l->fReductionLevel  = GAIN_AMP_0_DB;
+                    l->vVcaBuf          = reinterpret_cast<float *>(ptr);
+                    ptr                += szof_ovs_buf;
+
+                    l->pEnable          = NULL;
+                    l->pAlrOn           = NULL;
+                    l->pAlrAttack       = NULL;
+                    l->pAlrRelease      = NULL;
+                    l->pAlrKnee         = NULL;
+
+                    l->pMode            = NULL;
+                    l->pThresh          = NULL;
+                    l->pBoost           = NULL;
+                    l->pAttack          = NULL;
+                    l->pRelease         = NULL;
+                    l->pStereoLink      = NULL;
+                    l->pReductionMeter  = NULL;
+                }
             }
 
             // Bind ports
@@ -534,6 +542,7 @@ namespace lsp
                     c->sDataDelayMB.destroy();
                     c->sDataDelaySB.destroy();
                     c->sDryDelay.destroy();
+                    c->sLimiter.sLimit.destroy();
 
                     // Destroy bands
                     for (size_t j=0; j<meta::mb_limiter::BANDS_MAX; ++j)
@@ -546,10 +555,6 @@ namespace lsp
                         b->sRejFilter.destroy();
                         b->sAllFilter.destroy();
                     }
-
-                    // Destroy main limiter
-                    limiter_t *l    = &c->sLimiter;
-                    l->sLimit.destroy();
                 }
 
                 vChannels       = NULL;
@@ -589,8 +594,9 @@ namespace lsp
                 }
             }
 
-            // Force to rebuild plan
-            nPlanSize        = 0;
+            // Force to rebuild plan and envelope boost
+            nPlanSize       = 0;
+            bEnvUpdate      = true;
         }
 
         size_t mb_limiter::decode_real_sample_rate(size_t mode)
@@ -750,6 +756,7 @@ namespace lsp
             }
 
             // Store gain
+            bExtSc              = (pExtSc != NULL) ? (pExtSc->value() >= 0.5f) : false;
             fInGain             = pInGain->value();
             fOutGain            = pOutGain->value();
             fZoom               = pZoom->value();
@@ -777,8 +784,9 @@ namespace lsp
             // Rebuild compression plan
             if (rebuild_bands)
             {
-                nPlanSize               = 1;
-                vPlan[0]                = 0;    // 0th band is always present
+                // Put enabled bands to plan
+                nPlanSize               = 0;
+                vPlan[nPlanSize++]      = 0;
 
                 for (size_t i=0; i<meta::mb_limiter::BANDS_MAX-1; ++i)
                 {
@@ -797,6 +805,28 @@ namespace lsp
                             if (vSplits[p1].fFreq > vSplits[p2].fFreq)
                                 lsp::swap(vPlan[si], vPlan[sj]);
                         }
+                }
+
+                // Update plan for channels and basic band parameters (enabled, start and end frequency)
+                for (size_t i=0; i<nChannels; ++i)
+                {
+                    channel_t *c    = &vChannels[i];
+
+                    for (size_t j=0; j<meta::mb_limiter::BANDS_MAX; ++j)
+                        c->vBands[j].bEnabled   = (j > 0) ? vSplits[j-1].bEnabled : true;
+
+                    for (size_t j=0; j<nPlanSize; ++j)
+                    {
+                        size_t band_id          = vPlan[j];
+                        band_t *b               = &c->vBands[band_id];
+                        c->vPlan[j]             = b;
+                        b->fFreqStart           = (band_id > 0) ? vSplits[band_id-1].fFreq : 0.0f;
+                    }
+                    for (size_t j=0; j<nPlanSize; ++j)
+                    {
+                        band_t *b               = c->vPlan[j];
+                        b->fFreqEnd             = (j < (nPlanSize - 1)) ? c->vPlan[j+1]->fFreqStart : fSampleRate >> 1;
+                    }
                 }
             }
 
@@ -878,7 +908,6 @@ namespace lsp
             float lookahead = pLookahead->value();
             nLookahead      = dspu::millis_to_samples(nRealSampleRate, lookahead);
 
-//            size_t latency = 0;
             bool has_solo  = false;
 
             // Configure channels (second pass)
@@ -890,24 +919,51 @@ namespace lsp
                 c->sDataDelayMB.set_delay(nLookahead);
                 c->sDataDelaySB.set_delay(nLookahead);
 
+                // Configure dither noise
+                c->sDither.set_bits(dither_bits);
+
+                // Update settings for the post-limiter
+                limiter_t *l    = &c->sLimiter;
+
+                dspu::limiter_mode_t limiter_mode = decode_limiter_mode(l->pMode->value());
+                float thresh    = l->pThresh->value();
+                bool boost      = l->pBoost->value() >= 0.5f;
+
+                l->bEnabled     = l->pEnable->value() >= 0.5f;
+                l->fStereoLink  = (l->pStereoLink != NULL) ? l->pStereoLink->value() * 0.01f : 0.0f;
+                if ((boost) && (i == 0))
+                    fOutGain       /= thresh;
+
+                l->sLimit.set_mode(limiter_mode);
+                l->sLimit.set_sample_rate(nRealSampleRate);
+                l->sLimit.set_lookahead(lookahead);
+                l->sLimit.set_threshold(thresh, !boost);
+                l->sLimit.set_attack(l->pAttack->value());
+                l->sLimit.set_release(l->pRelease->value());
+                l->sLimit.set_knee(l->pAlrKnee->value());
+                l->sLimit.set_alr(l->pAlrOn->value() >= 0.5f);
+                l->sLimit.set_alr_attack(l->pAlrAttack->value());
+                l->sLimit.set_alr_release(l->pAlrRelease->value());
+
                 // Update compressor bands
                 for (size_t j=0; j<meta::mb_limiter::BANDS_MAX; ++j)
                 {
                     band_t *b       = &c->vBands[j];
                     limiter_t *l    = &b->sLimiter;
 
-                    dspu::limiter_mode_t limiter_mode = decode_limiter_mode(l->pMode->value());
+                    limiter_mode    = decode_limiter_mode(l->pMode->value());
                     bool enabled    = l->pEnable->value() >= 0.5f;
-                    float thresh    = l->pThresh->value();
-                    bool boost      = l->pBoost->value() >= 0.5f;
+                    thresh          = l->pThresh->value();
+                    boost           = l->pBoost->value() >= 0.5f;
                     if (enabled && (j > 0))
                         enabled         = vSplits[j-1].bEnabled;
 
                     b->fPreamp      = b->pPreamp->value();
                     b->bMute        = b->pMute->value() >= 0.5f;
-                    b->bSolo        = b->pSolo->value() >= 0.5f;
-                    l->bEnabled     = enabled;
+                    b->bSolo        = (b->bEnabled) ? (b->pSolo->value() >= 0.5f) : false;
                     b->fMakeup      = b->pMakeup->value();
+
+                    l->bEnabled     = enabled;
                     l->fStereoLink  = (l->pStereoLink != NULL) ? l->pStereoLink->value() * 0.01f : 0.0f;
 
                     if (boost)
@@ -926,9 +982,6 @@ namespace lsp
                     c->sScOver.set_filtering(false);
                     if (c->sScOver.modified())
                         c->sScOver.update_settings();
-
-                    // Configure dither noise
-                    c->sDither.set_bits(dither_bits);
 
                     // Update settings for limiter
                     l->sLimit.set_mode(limiter_mode);
@@ -955,8 +1008,6 @@ namespace lsp
                     band_t *b       = &c->vBands[j];
                     if ((!b->bMute) && (has_solo))
                         b->bMute        = !b->bSolo;
-                    if (rebuild_bands)
-                        b->bEnabled     = false;
                 }
 
                 c->sScBoost.set_sample_rate(real_srate);
@@ -967,17 +1018,6 @@ namespace lsp
                     // Configure equalizers
                     lsp_trace("Configure bands according to new plan");
 
-                    // Disable all bands first
-                    for (size_t j=0; j<nPlanSize; ++j)
-                    {
-                        size_t band_id  = vPlan[j];
-
-                        band_t *b       = &c->vBands[band_id];
-                        b->bEnabled     = true;
-                        b->fFreqStart   = (band_id > 0) ? vSplits[band_id-1].fFreq : 0.0f;
-                        c->vPlan[j]     = b;
-                    }
-
                     // Process only enabled bands
                     for (size_t j=0; j < nPlanSize; ++j)
                     {
@@ -987,7 +1027,6 @@ namespace lsp
 
                         // Check that band is enabled
                         b->bSync        = true;
-                        b->fFreqEnd     = (j < (nPlanSize - 1)) ? c->vPlan[j+1]->fFreqStart : fSampleRate >> 1;
 //                        lsp_trace("[%d]: %f - %f", int(j), b->fFreqStart, b->fFreqEnd);
                         b->pFreqEnd->set_value(b->fFreqEnd);
 
@@ -1047,17 +1086,13 @@ namespace lsp
                         b->sAllFilter.set_sample_rate(nRealSampleRate);
                     }
                 } // nPlanSize
-
-                // TODO: Calculate latency
-//                for (size_t j=0; j<c->nPlanSize; ++j)
-//                {
-//                    comp_band_t *b  = c->vPlan[j];
-//                    latency         = lsp_max(latency, b->nLookahead);
-//                }
             }
 
             nEnvBoost           = env_boost;
             bEnvUpdate          = false;
+
+            // Report latency
+            set_latency(nLookahead * 2 + vChannels[0].sOver.latency());
         }
 
         void mb_limiter::compute_multiband_vca_gain(channel_t *c, size_t samples)
@@ -1070,10 +1105,10 @@ namespace lsp
                 // Prepare sidechain signal with band equalizers
                 b->sEq.process(vTmpBuf, c->vScBuf, samples);
 
-                if (b->bEnabled)
-                    b->sLimiter.sLimit.process(b->vVcaBuf, vTmpBuf, samples);
+                if (b->sLimiter.bEnabled)
+                    b->sLimiter.sLimit.process(b->sLimiter.vVcaBuf, vTmpBuf, samples);
                 else
-                    dsp::fill(b->vVcaBuf, (b->bMute) ? GAIN_AMP_M_INF_DB : GAIN_AMP_0_DB, samples);
+                    dsp::fill(b->sLimiter.vVcaBuf, (b->bMute) ? GAIN_AMP_M_INF_DB : GAIN_AMP_0_DB, samples);
             }
         }
 
@@ -1084,8 +1119,8 @@ namespace lsp
                 band_t *left = vChannels[0].vPlan[i];
                 band_t *right= vChannels[1].vPlan[i];
                 perform_stereo_link(
-                    left->vVcaBuf,
-                    right->vVcaBuf,
+                    left->sLimiter.vVcaBuf,
+                    right->sLimiter.vVcaBuf,
                     left->sLimiter.fStereoLink,
                     samples);
             }
@@ -1104,21 +1139,21 @@ namespace lsp
             {
                 band_t *b       = c->vPlan[j];
 
-                // Output curve level
-                float reduction     = dsp::min(b->vVcaBuf, samples);
+                // Compute gain reduction level
+                float reduction     = dsp::min(b->sLimiter.vVcaBuf, samples);
                 b->sLimiter.fReductionLevel  = lsp_min(b->sLimiter.fReductionLevel, reduction);
 
                 // Check muting option
                 if (b->bMute)
-                    dsp::fill_zero(b->vVcaBuf, samples);
+                    dsp::fill_zero(b->sLimiter.vVcaBuf, samples);
                 else
-                    dsp::mul_k2(b->vVcaBuf, b->fMakeup, samples);
+                    dsp::mul_k2(b->sLimiter.vVcaBuf, b->fMakeup, samples);
 
                 // Do the crossover stuff
-                b->sAllFilter.process(c->vDataBuf, c->vDataBuf, samples);   // Process the signal with all-pass
-                b->sPassFilter.process(vEnvBuf, vTmpBuf, samples);          // Filter frequencies from input
-                dsp::fmadd3(c->vDataBuf, vEnvBuf, b->vVcaBuf, samples);     // Apply VCA gain to band and add to output data buffer
-                b->sRejFilter.process(vTmpBuf, vTmpBuf, samples);           // Filter frequencies from input
+                b->sAllFilter.process(c->vDataBuf, c->vDataBuf, samples);           // Process the signal with all-pass
+                b->sPassFilter.process(vEnvBuf, vTmpBuf, samples);                  // Filter frequencies from input
+                dsp::fmadd3(c->vDataBuf, vEnvBuf, b->sLimiter.vVcaBuf, samples);    // Apply VCA gain to band and add to output data buffer
+                b->sRejFilter.process(vTmpBuf, vTmpBuf, samples);                   // Filter frequencies from input
             }
         }
 
@@ -1136,6 +1171,47 @@ namespace lsp
             }
         }
 
+        void mb_limiter::process_single_band(size_t samples)
+        {
+            // Process the VCA signal for each channel
+            for (size_t i=0; i<nChannels; ++i)
+            {
+                channel_t *c = &vChannels[i];
+
+                if (c->sLimiter.bEnabled)
+                    c->sLimiter.sLimit.process(c->sLimiter.vVcaBuf, c->vDataBuf, samples);
+                else
+                    dsp::fill(c->sLimiter.vVcaBuf, GAIN_AMP_0_DB, samples);
+            }
+
+            // Do stereo linking
+            if (nChannels > 1)
+            {
+                limiter_t *left     = &vChannels[0].sLimiter;
+                limiter_t *right    = &vChannels[1].sLimiter;
+
+                perform_stereo_link(
+                    left->vVcaBuf,
+                    right->vVcaBuf,
+                    left->fStereoLink,
+                    samples);
+            }
+
+            // Apply changes to the signal
+            for (size_t i=0; i<nChannels; ++i)
+            {
+                channel_t *c = &vChannels[i];
+
+                // Compute gain reduction level
+                float reduction             = dsp::min(c->sLimiter.vVcaBuf, samples);
+                c->sLimiter.fReductionLevel = lsp_min(c->sLimiter.fReductionLevel, reduction);
+
+                // Apply lookahead and gain reduction to the input signal
+                c->sDataDelaySB.process(c->vDataBuf, c->vDataBuf, samples);
+                dsp::mul2(c->vDataBuf, c->sLimiter.vVcaBuf, samples);
+            }
+        }
+
         void mb_limiter::process(size_t samples)
         {
             // Bind input signal
@@ -1146,6 +1222,8 @@ namespace lsp
                 c->vIn              = c->pIn->buffer<float>();
                 c->vOut             = c->pOut->buffer<float>();
                 c->vSc              = (c->pSc != NULL) ? c->pSc->buffer<float>() : c->vIn;
+
+                c->sLimiter.fReductionLevel  = GAIN_AMP_P_96_DB;
 
                 for (size_t i=0; i<meta::mb_limiter::BANDS_MAX; ++i)
                 {
@@ -1165,12 +1243,17 @@ namespace lsp
                 oversample_data(count);
                 for (size_t i=0; i<nChannels; ++i)
                     compute_multiband_vca_gain(&vChannels[i], ovs_count);
-                if (nChannels == 2)
+                if (nChannels > 1)
                     process_multiband_stereo_link(ovs_count);
                 for (size_t i=0; i<nChannels; ++i)
                     apply_multiband_vca_gain(&vChannels[i], ovs_count);
+
+                // Perform single-band processing
+                process_single_band(ovs_count);
+
+                // Post-process data
                 downsample_data(count);
-                perform_fft_analysis(count);
+                perform_analysis(count);
 
                 // Output audio
                 for (size_t i=0; i<nChannels; ++i)
@@ -1237,7 +1320,7 @@ namespace lsp
             }
         }
 
-        void mb_limiter::perform_fft_analysis(size_t samples)
+        void mb_limiter::perform_analysis(size_t samples)
         {
             // Prepare processing
             const float *bufs[4] = { NULL, NULL, NULL, NULL };
@@ -1246,6 +1329,9 @@ namespace lsp
                 channel_t *c            = &vChannels[i];
                 bufs[c->nAnInChannel]   = c->vIn;
                 bufs[c->nAnOutChannel]  = c->vData;
+
+                c->pOutMeter->set_value(dsp::abs_max(c->vData, samples));
+                c->pInMeter->set_value(dsp::abs_max(c->vIn, samples) * fInGain);
             }
 
             // Perform processing
@@ -1258,11 +1344,15 @@ namespace lsp
             {
                 channel_t *c        = &vChannels[i];
 
+                // Report gain reduction for master limiter
+                float reduction     = (c->sLimiter.bEnabled) ? c->sLimiter.fReductionLevel : GAIN_AMP_0_DB;
+                c->sLimiter.pReductionMeter->set_value(reduction);
+
                 for (size_t j=0; j<meta::mb_limiter::BANDS_MAX; ++j)
                 {
                     band_t *b           = &c->vBands[j];
 
-                    float reduction     = (b->bEnabled) ? b->sLimiter.fReductionLevel : GAIN_AMP_0_DB;
+                    reduction           = ((b->bEnabled) && (b->sLimiter.bEnabled)) ? b->sLimiter.fReductionLevel : GAIN_AMP_0_DB;
                     b->sLimiter.pReductionMeter->set_value(reduction);
                 }
             }
@@ -1345,6 +1435,7 @@ namespace lsp
                         // Copy frequency points
                         dsp::copy(&mesh->pvData[0][1], vFreqs, meta::mb_limiter::FFT_MESH_POINTS);
                         sAnalyzer.get_spectrum(c->nAnInChannel, &mesh->pvData[1][1], vIndexes, meta::mb_limiter::FFT_MESH_POINTS);
+                        dsp::mul_k2(&mesh->pvData[1][1], fInGain, meta::mb_limiter::FFT_MESH_POINTS);
 
                         // Mark mesh containing data
                         mesh->data(2, meta::mb_limiter::FFT_MESH_POINTS + 2);

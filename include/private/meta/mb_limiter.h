@@ -74,7 +74,7 @@ namespace lsp
             static constexpr float  ALR_RELEASE_TIME_DFL    = 50.0f;
             static constexpr float  ALR_RELEASE_TIME_STEP   = 0.0025f;
 
-            static constexpr float  THRESHOLD_MIN           = GAIN_AMP_M_48_DB;
+            static constexpr float  THRESHOLD_MIN           = GAIN_AMP_M_60_DB;
             static constexpr float  THRESHOLD_MAX           = GAIN_AMP_0_DB;
             static constexpr float  THRESHOLD_DFL           = GAIN_AMP_0_DB;
             static constexpr float  THRESHOLD_STEP          = 0.01f;

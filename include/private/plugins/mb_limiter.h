@@ -56,6 +56,7 @@ namespace lsp
                     bool                    bEnabled;           // Enabled flag
                     float                   fStereoLink;        // Stereo linking
                     float                   fReductionLevel;    // Gain reduction level
+                    float                  *vVcaBuf;            // Voltage-controlled amplification value for each band
 
                     plug::IPort            *pEnable;            // Enable
                     plug::IPort            *pAlrOn;             // Automatic level regulation
@@ -91,7 +92,6 @@ namespace lsp
                     float                   fMakeup;            // Makeup gain
 
                     float                  *vTrOut;             // Transfer function output
-                    float                  *vVcaBuf;            // Voltage-controlled amplification value for each band
 
                     plug::IPort            *pFreqEnd;           // Frequency range end
                     plug::IPort            *pSolo;              // Solo switch
@@ -194,11 +194,12 @@ namespace lsp
             protected:
                 void                    output_meters();
                 void                    output_fft_curves();
-                void                    perform_fft_analysis(size_t samples);
+                void                    perform_analysis(size_t samples);
                 void                    oversample_data(size_t samples);
                 void                    compute_multiband_vca_gain(channel_t *c, size_t samples);
                 void                    process_multiband_stereo_link(size_t samples);
                 void                    apply_multiband_vca_gain(channel_t *c, size_t samples);
+                void                    process_single_band(size_t samples);
                 void                    downsample_data(size_t samples);
                 void                    perform_stereo_link(float *cl, float *cr, float link, size_t samples);
 

@@ -134,9 +134,9 @@ namespace lsp
             SWITCH("se" id, "Limiter band enable" label, enable), \
             LOG_CONTROL_DFL("sf" id, "Band split frequency" label, U_HZ, mb_limiter::FREQ, freq)
 
-        #define MBL_LIMITER(id, label) \
+        #define MBL_LIMITER(id, label, alr) \
             SWITCH("on" id, "Limiter enabled" label, 1.0f), \
-            SWITCH("alr" id, "Automatic level regulation" label, 1.0f), \
+            SWITCH("alr" id, "Automatic level regulation" label, alr), \
             LOG_CONTROL("aat" id, "Automatic level regulation attack time" label, U_MSEC, mb_limiter::ALR_ATTACK_TIME), \
             LOG_CONTROL("art" id, "Automatic level regulation release time" label, U_MSEC, mb_limiter::ALR_RELEASE_TIME), \
             LOG_CONTROL("akn" id, "Automatic level regulation knee" label, U_GAIN_AMP, mb_limiter::KNEE), \
@@ -150,11 +150,11 @@ namespace lsp
             METER_OUT_GAIN("rlm" id, "Reduction level meter" label, GAIN_AMP_0_DB)
 
         #define MBL_MAIN_LIMITER_MONO \
-            MBL_LIMITER("", " Main"), \
+            MBL_LIMITER("", " Main", 0.0f), \
             MBL_LIMITER_METERS("", " Main")
 
         #define MBL_MAIN_LIMITER_STEREO \
-            MBL_LIMITER("", " Main"), \
+            MBL_LIMITER("", " Main", 0.0f), \
             LOG_CONTROL("slink", "Stereo linking Main", U_PERCENT, mb_limiter::LINKING), \
             MBL_LIMITER_METERS("_l", " Main Left"), \
             MBL_LIMITER_METERS("_r", " Main Right")
@@ -166,7 +166,7 @@ namespace lsp
             AMP_GAIN100("bpa" id, "Band preamp" label, GAIN_AMP_0_DB), \
             LOG_CONTROL("bmk" id, "Band makeup" label, U_GAIN_AMP, mb_limiter::MAKEUP), \
             MESH("bfc" id, "Band filter chart" label, 2, mb_limiter::FFT_MESH_POINTS + 2), \
-            MBL_LIMITER(id, label)
+            MBL_LIMITER(id, label, 1.0f)
 
         #define MBL_BAND_MONO(id, label) \
             MBL_BAND_COMMON(id, label), \
@@ -325,7 +325,7 @@ namespace lsp
         {
             "Multi-band Begrenzer Mono",
             "Multiband Limiter Mono",
-            "MBL1M",
+            "MBB1M",
             &developers::v_sadovnikov,
             "mb_limiter_mono",
             LSP_LV2_URI("mb_limiter_mono"),
@@ -339,7 +339,7 @@ namespace lsp
             clap_features_mono,
             E_DUMP_STATE | E_INLINE_DISPLAY,
             mb_limiter_mono_ports,
-            "dynamics/limiter/multiband/limiter.xml",
+            "dynamics/limiter/multiband/mono.xml",
             NULL,
             mono_plugin_port_groups,
             &mb_limiter_bundle
@@ -349,7 +349,7 @@ namespace lsp
         {
             "Multi-band Begrenzer Stereo",
             "Multiband Limiter Stereo",
-            "MBL1S",
+            "MBB1S",
             &developers::v_sadovnikov,
             "mb_limiter_stereo",
             LSP_LV2_URI("mb_limiter_stereo"),
@@ -363,7 +363,7 @@ namespace lsp
             clap_features_stereo,
             E_DUMP_STATE | E_INLINE_DISPLAY,
             mb_limiter_stereo_ports,
-            "dynamics/limiter/multiband/limiter.xml",
+            "dynamics/limiter/multiband/stereo.xml",
             NULL,
             stereo_plugin_port_groups,
             &mb_limiter_bundle
@@ -373,7 +373,7 @@ namespace lsp
         {
             "Sidechain Multi-band Begrenzer Mono",
             "Sidechain Multiband Limiter Mono",
-            "SCMBL1M",
+            "SCMBB1M",
             &developers::v_sadovnikov,
             "sc_mb_limiter_mono",
             LSP_LV2_URI("sc_mb_limiter_mono"),
@@ -387,7 +387,7 @@ namespace lsp
             clap_features_mono,
             E_DUMP_STATE | E_INLINE_DISPLAY,
             sc_mb_limiter_mono_ports,
-            "dynamics/limiter/multiband/limiter.xml",
+            "dynamics/limiter/multiband/mono.xml",
             NULL,
             mono_plugin_port_groups,
             &mb_limiter_bundle
@@ -397,7 +397,7 @@ namespace lsp
         {
             "Sidechain Multi-band Begrenzer Stereo",
             "Sidechain Multiband Limiter Stereo",
-            "SCMBL1S",
+            "SCMBB1S",
             &developers::v_sadovnikov,
             "sc_mb_limiter_stereo",
             LSP_LV2_URI("sc_mb_limiter_stereo"),
@@ -411,7 +411,7 @@ namespace lsp
             clap_features_stereo,
             E_DUMP_STATE | E_INLINE_DISPLAY,
             sc_mb_limiter_stereo_ports,
-            "dynamics/limiter/multiband/limiter.xml",
+            "dynamics/limiter/multiband/stereo.xml",
             NULL,
             stereo_plugin_port_groups,
             &mb_limiter_bundle

@@ -181,8 +181,8 @@ namespace lsp
         #define MBL_METERS(id, label) \
             SWITCH("ife" id, "Input FFT enable" label, 1.0f), \
             SWITCH("ofe" id, "Output FFT enable" label, 1.0f), \
-            METER_OUT_GAIN("ilm" id, "Input level meter" label, GAIN_AMP_0_DB), \
-            METER_OUT_GAIN("olm" id, "Output level meter" label, GAIN_AMP_0_DB), \
+            METER_OUT_GAIN("ilm" id, "Input level meter" label, GAIN_AMP_P_24_DB), \
+            METER_OUT_GAIN("olm" id, "Output level meter" label, GAIN_AMP_P_24_DB), \
             MESH("ifg" id, "Input FFT graph" label, 2, mb_limiter::FFT_MESH_POINTS + 2), \
             MESH("ofg" id, "Output FFT graph" label, 2, mb_limiter::FFT_MESH_POINTS), \
             MESH("ag" id, "Amplification graph" label, 2, mb_limiter::FFT_MESH_POINTS + 2)

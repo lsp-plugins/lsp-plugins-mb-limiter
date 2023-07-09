@@ -222,6 +222,8 @@ namespace lsp
                 if (!c->sScOver.init())
                     return;
 
+                c->sDither.init();
+
                 // Initialize
                 if (!c->sDataDelayMB.init(dspu::millis_to_samples(MAX_SAMPLE_RATE * meta::mb_limiter::OVERSAMPLING_MAX, lk_latency) + BUFFER_SIZE))
                     return;
@@ -1208,7 +1210,18 @@ namespace lsp
 
                 // Apply lookahead and gain reduction to the input signal
                 c->sDataDelaySB.process(c->vDataBuf, c->vDataBuf, samples);
-                dsp::mul2(c->vDataBuf, c->sLimiter.vVcaBuf, samples);
+                dsp::fmmul_k3(c->vDataBuf, c->sLimiter.vVcaBuf, fOutGain, samples);
+            }
+        }
+
+        void mb_limiter::output_audio(size_t samples)
+        {
+            for (size_t i=0; i<nChannels; ++i)
+            {
+                channel_t *c        = &vChannels[i];
+
+                c->sDryDelay.process(vTmpBuf, c->vIn, samples);
+                c->sBypass.process(c->vOut, vTmpBuf, c->vData, samples);
             }
         }
 
@@ -1256,11 +1269,7 @@ namespace lsp
                 perform_analysis(count);
 
                 // Output audio
-                for (size_t i=0; i<nChannels; ++i)
-                {
-                    channel_t *c        = &vChannels[i];
-                    dsp::copy(c->vOut, c->vData, count);
-                }
+                output_audio(count);
 
                 // Update pointers
                 for (size_t i=0; i<nChannels; ++i)

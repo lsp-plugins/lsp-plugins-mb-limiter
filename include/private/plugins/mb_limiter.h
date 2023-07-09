@@ -202,6 +202,7 @@ namespace lsp
                 void                    process_single_band(size_t samples);
                 void                    downsample_data(size_t samples);
                 void                    perform_stereo_link(float *cl, float *cr, float link, size_t samples);
+                void                    output_audio(size_t samples);
 
                 size_t                  decode_real_sample_rate(size_t mode);
 

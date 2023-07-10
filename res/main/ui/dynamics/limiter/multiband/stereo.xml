@@ -301,7 +301,7 @@
 								<button id="gb_${i}" pad.h="6" height="18" width="70" text="labels.boost_" ui:inject="Button_violet_8"/>
 							</vbox>
 						</cell>
-						<knob id="th_${i}" />
+						<knob id="th_${i}" meter.visibility="true" meter.max=":ig_${i}" />
 						<knob id="at_${i}" />
 						<knob id="rt_${i}" />
 						<knob id="bsl_${i}" />
@@ -378,7 +378,7 @@
 				
 				<!-- Row 2 -->
 				<hbox>
-					<knob id="th" scolor="threshold"/>
+					<knob id="th" scolor="threshold" meter.visibility="true" meter.max=":ig" />
 					<value id="th" width.min="32" pad.l="4"/>
 				</hbox>
 				<knob id="at" scolor="attack"/>

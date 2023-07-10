@@ -145,7 +145,7 @@ namespace lsp
             SWITCH("gb" id, "Gain boost" label, 1.0f), \
             LOG_CONTROL("at" id, "Attack time" label, U_MSEC, mb_limiter::ATTACK_TIME), \
             LOG_CONTROL("rt" id, "Release time" label, U_MSEC, mb_limiter::RELEASE_TIME), \
-            METER_OUT_GAIN("ig" id, "Input gain meter" label, GAIN_AMP_M_INF_DB)
+            METER_OUT_GAIN("ig" id, "Input gain meter" label, mb_limiter::THRESHOLD_MAX)
 
         #define MBL_LIMITER_METERS(id, label) \
             METER_OUT_GAIN("rlm" id, "Reduction level meter" label, GAIN_AMP_0_DB)

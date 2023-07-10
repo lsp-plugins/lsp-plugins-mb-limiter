@@ -243,6 +243,7 @@ namespace lsp
 
                 l->bEnabled         = false;
                 l->fStereoLink      = 0.0f;
+                l->fInLevel         = GAIN_AMP_M_INF_DB;
                 l->fReductionLevel  = GAIN_AMP_0_DB;
                 l->vVcaBuf          = reinterpret_cast<float *>(ptr);
                 ptr                += szof_ovs_buf;
@@ -258,6 +259,7 @@ namespace lsp
                 l->pBoost           = NULL;
                 l->pAttack          = NULL;
                 l->pRelease         = NULL;
+                l->pInMeter         = NULL;
                 l->pStereoLink      = NULL;
                 l->pReductionMeter  = NULL;
 
@@ -342,6 +344,7 @@ namespace lsp
 
                     l->bEnabled         = false;
                     l->fStereoLink      = 0.0f;
+                    l->fInLevel         = GAIN_AMP_M_INF_DB;
                     l->fReductionLevel  = GAIN_AMP_0_DB;
                     l->vVcaBuf          = reinterpret_cast<float *>(ptr);
                     ptr                += szof_ovs_buf;
@@ -357,6 +360,7 @@ namespace lsp
                     l->pBoost           = NULL;
                     l->pAttack          = NULL;
                     l->pRelease         = NULL;
+                    l->pInMeter         = NULL;
                     l->pStereoLink      = NULL;
                     l->pReductionMeter  = NULL;
                 }
@@ -425,6 +429,7 @@ namespace lsp
                     l->pBoost           = sl->pBoost;
                     l->pAttack          = sl->pAttack;
                     l->pRelease         = sl->pRelease;
+                    l->pInMeter         = NULL;
                     l->pStereoLink      = NULL;
                 }
                 else
@@ -440,6 +445,7 @@ namespace lsp
                     l->pBoost           = TRACE_PORT(ports[port_id++]);
                     l->pAttack          = TRACE_PORT(ports[port_id++]);
                     l->pRelease         = TRACE_PORT(ports[port_id++]);
+                    l->pInMeter         = TRACE_PORT(ports[port_id++]);
                     l->pStereoLink      = (nChannels > 1) ? TRACE_PORT(ports[port_id++]) : NULL;
                 }
 
@@ -490,6 +496,7 @@ namespace lsp
                         l->pBoost           = sl->pBoost;
                         l->pAttack          = sl->pAttack;
                         l->pRelease         = sl->pRelease;
+                        l->pInMeter         = NULL;
                         l->pStereoLink      = NULL;
                     }
                     else
@@ -514,6 +521,7 @@ namespace lsp
                         l->pBoost           = TRACE_PORT(ports[port_id++]);
                         l->pAttack          = TRACE_PORT(ports[port_id++]);
                         l->pRelease         = TRACE_PORT(ports[port_id++]);
+                        l->pInMeter         = TRACE_PORT(ports[port_id++]);
                         l->pStereoLink      = (nChannels > 1) ? TRACE_PORT(ports[port_id++]) : NULL;
                     }
 
@@ -1106,7 +1114,9 @@ namespace lsp
 
                 // Prepare sidechain signal with band equalizers
                 b->sEq.process(vTmpBuf, c->vScBuf, samples);
+                dsp::mul_k2(vTmpBuf, b->fPreamp, samples);
 
+                b->sLimiter.fInLevel    = lsp_max(b->sLimiter.fInLevel, dsp::abs_max(vTmpBuf, samples));
                 if (b->sLimiter.bEnabled)
                     b->sLimiter.sLimit.process(b->sLimiter.vVcaBuf, vTmpBuf, samples);
                 else
@@ -1180,6 +1190,7 @@ namespace lsp
             {
                 channel_t *c = &vChannels[i];
 
+                c->sLimiter.fInLevel    = lsp_max(c->sLimiter.fInLevel, dsp::abs_max(c->vDataBuf, samples));
                 if (c->sLimiter.bEnabled)
                     c->sLimiter.sLimit.process(c->sLimiter.vVcaBuf, c->vDataBuf, samples);
                 else
@@ -1236,12 +1247,14 @@ namespace lsp
                 c->vOut             = c->pOut->buffer<float>();
                 c->vSc              = (c->pSc != NULL) ? c->pSc->buffer<float>() : c->vIn;
 
-                c->sLimiter.fReductionLevel  = GAIN_AMP_P_96_DB;
+                c->sLimiter.fInLevel        = GAIN_AMP_M_INF_DB;
+                c->sLimiter.fReductionLevel = GAIN_AMP_P_96_DB;
 
                 for (size_t i=0; i<meta::mb_limiter::BANDS_MAX; ++i)
                 {
                     band_t *b           = &c->vBands[i];
-                    b->sLimiter.fReductionLevel  = GAIN_AMP_P_96_DB;
+                    b->sLimiter.fInLevel        = GAIN_AMP_M_INF_DB;
+                    b->sLimiter.fReductionLevel = GAIN_AMP_P_96_DB;
                 }
             }
 
@@ -1363,6 +1376,38 @@ namespace lsp
 
                     reduction           = ((b->bEnabled) && (b->sLimiter.bEnabled)) ? b->sLimiter.fReductionLevel : GAIN_AMP_0_DB;
                     b->sLimiter.pReductionMeter->set_value(reduction);
+                }
+            }
+
+            // Output input gain meters
+            if (nChannels > 1)
+            {
+                limiter_t *left     = &vChannels[0].sLimiter;
+                limiter_t *right    = &vChannels[1].sLimiter;
+                float in_gain       = (left->bEnabled) ? lsp_max(left->fInLevel, right->fInLevel) : GAIN_AMP_M_INF_DB;
+                left->pInMeter->set_value(in_gain);
+
+                for (size_t j=0; j<meta::mb_limiter::BANDS_MAX; ++j)
+                {
+                    band_t *b           = &vChannels[0].vBands[j];
+                    left                = &vChannels[0].vBands[j].sLimiter;
+                    right               = &vChannels[1].vBands[j].sLimiter;
+                    in_gain             = ((b->bEnabled) && (left->bEnabled)) ? lsp_max(left->fInLevel, right->fInLevel) : GAIN_AMP_M_INF_DB;
+                    left->pInMeter->set_value(in_gain);
+                }
+            }
+            else
+            {
+                limiter_t *mid      = &vChannels[0].sLimiter;
+                float in_gain       = (mid->bEnabled) ? mid->fInLevel : GAIN_AMP_M_INF_DB;
+                mid->pInMeter->set_value(in_gain);
+
+                for (size_t j=0; j<meta::mb_limiter::BANDS_MAX; ++j)
+                {
+                    band_t *b           = &vChannels[0].vBands[j];
+                    mid                 = &vChannels[0].vBands[j].sLimiter;
+                    in_gain             = ((b->bEnabled) && (mid->bEnabled)) ? mid->fInLevel : GAIN_AMP_M_INF_DB;
+                    mid->pInMeter->set_value(in_gain);
                 }
             }
         }

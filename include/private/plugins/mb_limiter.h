@@ -55,6 +55,7 @@ namespace lsp
 
                     bool                    bEnabled;           // Enabled flag
                     float                   fStereoLink;        // Stereo linking
+                    float                   fInLevel;           // Input level
                     float                   fReductionLevel;    // Gain reduction level
                     float                  *vVcaBuf;            // Voltage-controlled amplification value for each band
 
@@ -69,6 +70,7 @@ namespace lsp
                     plug::IPort            *pBoost;             // Gain boost
                     plug::IPort            *pAttack;            // Attack time
                     plug::IPort            *pRelease;           // Release time
+                    plug::IPort            *pInMeter;           // Input gain meter
                     plug::IPort            *pStereoLink;        // Stereo linking
                     plug::IPort            *pReductionMeter;    // Reduction gain meter
                 } limiter_t;

@@ -397,7 +397,10 @@
 				</cell>
 				
 				<!-- Row 3 -->
-				<button id="gb" pad.h="6" height="18" width="70" text="labels.boost_" ui:inject="Button_violet_8"/>
+				<vbox>
+					<button id="gb" pad.h="6" height="18" width="70" text="labels.boost_" ui:inject="Button_violet_8"/>
+					<button id="on" pad.h="6" height="18" width="70" text="labels.chan.on" ui:inject="Button_yellow"/>
+				</vbox>
 				<value id="at"/>
 				<value id="rt"/>
 				

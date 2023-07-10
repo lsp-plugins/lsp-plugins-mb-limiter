@@ -941,7 +941,7 @@ namespace lsp
 
                 l->bEnabled     = l->pEnable->value() >= 0.5f;
                 l->fStereoLink  = (l->pStereoLink != NULL) ? l->pStereoLink->value() * 0.01f : 0.0f;
-                if ((boost) && (i == 0))
+                if ((boost) && (i == 0) && (l->bEnabled))
                     fOutGain       /= thresh;
 
                 l->sLimit.set_mode(limiter_mode);

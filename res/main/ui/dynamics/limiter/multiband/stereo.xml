@@ -56,7 +56,7 @@
 					hlcolor="graph_marker_cycle"
 					rcolor="graph_marker_cycle"
 					hrcolor="graph_marker_cycle">
-					
+
 					<marker v="10" color.hue="0" hcolor.hue="0" rborder="16" rcolor.hue="0" hrborder="16" hrcolor.hue="0"/>
 					<marker id="bfe_1" color.hue="0" hcolor.hue="0" lborder="16" lcolor.hue="0" hlborder="16" hlcolor.hue="0"/>
 					<ui:for id="i" first="1" count="7">
@@ -84,7 +84,7 @@
 						fcolor="graph_mesh_cycle" fcolor.hue="${:i * 0.125}" fcolor.a="0.9"
 						visibility=":flt and :se_${:i}" />
 				</ui:for>
-				
+
 				<mesh id="ifg_l" width="0" color="left_in" color.a="0.8" fcolor.a="0.8" fill="true" fcolor="left_in" visibility=":ife_l"/>
 				<mesh id="ifg_r" width="0" color="right_in" color.a="0.8" fcolor.a="0.8" fill="true" fcolor="right_in" visibility=":ife_r"/>
 				<mesh id="ofg_l" width="3" color="left" visibility=":ofe_l"/>
@@ -130,7 +130,7 @@
 				</ui:with>
 			</graph>
 		</group>
-		
+
 		<!--  Row 1: zoom -->
 		<cell rows="2">
 			<vbox vexpand="true" bg.color="bg_schema">
@@ -222,7 +222,7 @@
 				</group>
 			</vbox>
 		</cell>
-		
+
 		<!-- Row 2: bottom line -->
 		<align halign="-1" vreduce="true">
 			<hbox spacing="4" vreduce="true" bg.color="bg_schema" pad.h="6">
@@ -237,30 +237,44 @@
 				<button id="flt" text="labels.filters" size="22" ui:inject="Button_cyan"/>
 			</hbox>
 		</align>
-	
+
 		<!-- Row 3: limiter bands -->
-		<cell cols="4" rows="2">
-			<group text="LIMITER BANDS"> <!-- TODO -->
-				<grid rows="18" cols="14">
+		<cell cols="4" rows="2" >
+			<group text="labels.limiter_bands" ipadding="0">
+				<grid rows="27" cols="16" >
 					<!-- Row 1 -->
-					<cell rows="2" cols="2">
+					<cell rows="3" cols="2">
+						<label text="labels.controls" />
+					</cell>
+					<cell rows="3">
 						<label text="labels.range" />
 					</cell>
-					<cell rows="2">
-						<label text="labels.controls" />
+					<cell rows="27">
+						<vsep pad.h="2" bg.color="bg" hreduce="true"/>
 					</cell>
 					<cell cols="3">
 						<label text="labels.alr" />
 					</cell>
+					<cell rows="27">
+						<vsep pad.h="2" bg.color="bg" hreduce="true"/>
+					</cell>
 					<cell cols="8">
 						<label text="labels.plug.limiter" />
 					</cell>
-					
-					<!-- Row 2 -->
+
+<!-- Row 2 -->
+					<cell cols="3">
+						<hsep pad.v="2" bg.color="bg" vreduce="true"/>
+					</cell>
+					<cell cols="8">
+						<hsep pad.v="2" bg.color="bg" vreduce="true"/>
+					</cell>
+
+					<!-- Row 3 -->
 					<label text="labels.attack" />
 					<label text="labels.release" />
 					<label text="labels.knee" />
-					
+
 					<label text="labels.preamp" />
 					<label text="labels.mode" />
 					<label text="labels.thresh_old" />
@@ -269,31 +283,79 @@
 					<label text="labels.stereo_link" />
 					<label text="labels.makeup" />
 					<label text="labels.reduction" />
-					
+
 					<ui:for id="i" first="1" count="8">
-						<!-- Row 1 -->
-						<ui:if test=":i ile 1">
-							<void />
-							<void />
-						</ui:if>
-						<ui:if test=":i igt 1">
-							<button id="se_${:i-1}" text="labels.chan.ON" />
-							<knob id="sf_${:i-1}" />
-						</ui:if>
-						
-						<cell rows="2">
-							<grid rows="2" cols="2">
-								<button id="bs_${i}" text="labels.chan.S_olo" height="19" hfill="true" ui:inject="Button_green_8"/>
-								<button id="on_${i}" text="labels.chan.ON" height="19" hfill="true" ui:inject="Button_yellow_8"/>
-								
-								<button id="bm_${i}" text="labels.chan.M_ute" height="19" hfill="true" ui:inject="Button_red_8"/>
-								<button id="alr_${i}" text="labels.alr" height="19" hfill="true" ui:inject="Button_yellow_8"/>
+												<!-- Row 1 -->
+						<cell cols="3">
+							<hsep pad.v="2" bg.color="bg" vreduce="true"/>
+						</cell>
+						<cell cols="3">
+							<hsep pad.v="2" bg.color="bg" vreduce="true"/>
+						</cell>
+						<cell cols="8">
+							<hsep pad.v="2" bg.color="bg" vreduce="true"/>
+						</cell>
+
+						<!-- Row 2 -->
+						<cell rows="2" cols="2">
+							<grid rows="2" cols="2" vfill="false">
+								<cell cols="2">
+									<ui:if test=":i ile 1">
+										<button id="se_${:i-1}" value="1" editable="false" pointer="arrow" text="labels.chan.ON" height="19" pad.v="4" pad.h="6" hfill="true" ui:inject="Button_ne_Cycle"/>
+									</ui:if>
+									<ui:if test=":i igt 1">
+										<button
+											id="se_${:i-1}"
+											text="labels.chan.ON"
+											ui:inject="Button_Cycle"
+											hfill="true"
+											height="19"
+											pad.v="4"
+											pad.h="6"
+											down.color.hue="${(:i-1) * 0.125}"
+											down.hover.color.hue="${(:i-1) * 0.125}"
+											text.down.color.hue="${(:i-1) * 0.125}"
+											text.down.hover.color.hue="${(:i-1) * 0.125}"
+											border.down.color.hue="${(:i-1) * 0.125}"
+											border.down.hover.color.hue="${(:i-1) * 0.125}"/>
+									</ui:if>
+								</cell>
+								<hbox pad.v="4">
+									<button id="on_${i}" text="labels.act_ive" height="19" hfill="true" ui:inject="Button_cyan_8" pad.h="6"/>
+									<button id="alr_${i}" text="labels.alr" height="19" hfill="true" ui:inject="Button_yellow_8" pad.r="6"/>
+									<button id="bs_${i}" text="labels.chan.S_olo" height="19" hfill="true" ui:inject="Button_green_8" pad.r="6"/>
+									<button id="bm_${i}" text="labels.chan.M_ute" height="19" hfill="true" ui:inject="Button_red_8" pad.r="6"/>
+								</hbox>
 							</grid>
 						</cell>
+
+						<cell rows="2">
+							<hbox>
+								<ui:if test=":i ile 1">
+									<knob id="sf_${:i-1}" value="1" editable="false" pointer="arrow"/>
+								</ui:if>
+								<ui:if test=":i igt 1">
+									<knob id="sf_${:i-1}"/>
+								</ui:if>
+								<vbox>
+									<ui:if test=":i ile 1">
+										<label text="0"/>
+										<!-- <label text="-" /> -->
+										<value id="bfe_${i}" detailed="false"/>
+									</ui:if>
+									<ui:if test=":i igt 1">
+										<value id="sf_${:i-1}" detailed="false"/>
+										<!-- <label text="-" /> -->
+										<value id="bfe_${i}" detailed="false"/>
+									</ui:if>
+								</vbox>
+							</hbox>
+						</cell>
+
 						<knob id="aat_${i}" />
 						<knob id="art_${i}" />
 						<knob id="akn_${i}" />
-						
+
 						<knob id="bpa_${i}" />
 						<cell rows="2">
 							<vbox>
@@ -307,7 +369,7 @@
 						<knob id="bsl_${i}" />
 						<knob id="bmk_${i}" />
 						<cell rows="2">
-							<ledmeter height.min="192">
+							<ledmeter height.min="5" >
 								<ledchannel
 									id="rlm_${i}l" min="-48 db" max="0 db" log="true"
 									balance="0 db" balance.visibility="true" type="peak"
@@ -318,9 +380,9 @@
 									peak.visibility="true" value.color="blue" />
 							</ledmeter>
 						</cell>
-						
-						<!-- Row 2 -->
-						<cell cols="2">
+
+						<!-- Row 3 -->
+						<!-- <cell cols="2">
 							<hbox>
 								<ui:if test=":i ile 1">
 									<label text="0" />
@@ -333,7 +395,7 @@
 									<value id="bfe_${i}" detailed="false" />
 								</ui:if>
 							</hbox>
-						</cell>
+						</cell> -->
 						<value id="aat_${i}" sline="true" />
 						<value id="art_${i}" sline="true" />
 						<value id="akn_${i}" sline="true" />
@@ -343,7 +405,7 @@
 						<value id="rt_${i}" sline="true" />
 						<value id="bsl_${i}" sline="true" />
 						<value id="bmk_${i}" sline="true" />
-						
+
 					</ui:for>
 
 				</grid>
@@ -375,7 +437,7 @@
 				<label text="labels.attack"/>
 				<label text="labels.release"/>
 				<label text="labels.gain"/>
-				
+
 				<!-- Row 2 -->
 				<hbox>
 					<knob id="th" scolor="threshold" meter.visibility="true" meter.max=":ig" />
@@ -395,7 +457,7 @@
 							peak.visibility="true" value.color="blue" />
 					</ledmeter>
 				</cell>
-				
+
 				<!-- Row 3 -->
 				<vbox>
 					<button id="gb" pad.h="6" height="18" width="70" text="labels.boost_" ui:inject="Button_violet_8"/>
@@ -403,17 +465,17 @@
 				</vbox>
 				<value id="at"/>
 				<value id="rt"/>
-				
+
 				<!-- Row 4 -->
 				<label text="labels.sc.lookahead" />
 				<label text="labels.stereo_link" />
 				<void />
-				
+
 				<!-- Row 5 -->
 				<knob id="lk" />
 				<knob id="slink" scolor="balance" />
 				<void />
-				
+
 				<!-- Row 6 -->
 				<value id="lk" />
 				<value id="slink" />

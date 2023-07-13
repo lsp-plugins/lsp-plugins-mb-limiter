@@ -128,7 +128,7 @@ namespace lsp
 
         #define MBL_SC_COMMON \
             MBL_COMMON, \
-            SWITCH("extsc", "External sidechain", 0.0f)
+            SWITCH("extsc", "External sidechain", 1.0f)
 
         #define MBL_SPLIT(id, label, enable, freq) \
             SWITCH("se" id, "Limiter band enable" label, enable), \

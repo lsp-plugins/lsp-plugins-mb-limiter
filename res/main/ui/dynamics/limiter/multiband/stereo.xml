@@ -1,4 +1,6 @@
 <plugin resizable="true">
+	<ui:set id="has_solo" value="
+		:bs_1 or (:bs_2 and :se_1) or (:bs_3 and :se_2) or (:bs_4 and :se_3) or (:bs_5 and :se_4) or (:bs_6 and :se_5) or (:bs_7 and :se_6) or (:bs_8 and :se_7)"/>
 	<grid rows="4" cols="5" vspacing="4" hspacing="4">
 		<!-- Row 1: Graph -->
 		<group ui:inject="GraphGroup" ipadding="0" expand="true" fill="true" text="labels.graphs.spectrum">
@@ -224,6 +226,7 @@
 		</cell>
 
 		<!-- Row 2: bottom line -->
+		<hbox>
 		<align halign="-1" vreduce="true">
 			<hbox spacing="4" vreduce="true" bg.color="bg_schema" pad.h="6">
 				<label text="labels.sc_boost:"/>
@@ -233,10 +236,16 @@
 				<label text="labels.dither:"/>
 				<combo id="dither" pad.r="8" pad.v="4"/>
 				<button id="alr" height="22" width="48" text="labels.alr" ui:inject="Button_yellow"/>
-				<button id="extsc" size="22" width="70" text="labels.sc.Ext_ernal" ui:inject="Button_cyan_8" visibility="ex :extsc"/>
 				<button id="flt" text="labels.filters" size="22" ui:inject="Button_cyan"/>
+				<void hexpand="true" hfill="true"/>
 			</hbox>
-		</align>
+			</align>
+			<vsep pad.h="2" bg.color="bg" hreduce="true" visibility="ex :extsc"/>
+			<hbox bg.color="bg_schema" hreduce="true" pad.h="6" visibility="ex :extsc">
+			<button id="extsc" size="22" text="labels.sc.External_sidechain" ui:inject="Button_orange" />
+		</hbox>
+		</hbox>
+
 
 		<!-- Row 3: limiter bands -->
 		<cell cols="4" rows="2" >
@@ -287,6 +296,8 @@
 				</ui:with>
 
 					<ui:for id="i" first="1" count="8">
+
+						<ui:set id="act_ch" value="(!:bm_${:i} and ((${has_solo}) ? :bs_${:i} : true) and (ex :se_${:i-1} ? (:se_${:i-1}) : true ))" />
 												<!-- Row 1 -->
 						<cell cols="3">
 							<hsep pad.v="2" bg.color="bg" vreduce="true"/>
@@ -298,12 +309,15 @@
 							<hsep pad.v="2" bg.color="bg" vreduce="true"/>
 						</cell>
 
+						<ui:with
+							bg.bright="(!${act_ch}) ? :const_bg_darken : 1.0"
+							bright="(!${act_ch}) ? 0.75 : 1.0">
 						<!-- Row 2 -->
 						<cell rows="2" cols="2">
 							<grid rows="2" cols="3" vfill="false" hreduce="true" pad.v="4" pad.h="6" spacing="4">
 								<cell rows="2">
 									<ui:if test=":i ile 1">
-										<button id="se_${:i-1}"
+										<button
 											value="1"
 											editable="false"
 											pointer="arrow"
@@ -327,22 +341,21 @@
 											border.down.hover.color.hue="${(:i-1) * 0.125}"/>
 									</ui:if>
 								</cell>
-									<button id="on_${i}" text="labels.act_ive" height="20" fill="true" ui:inject="Button_cyan_8" pad.b="1" />
-									<button id="alr_${i}" text="labels.alr" height="20" fill="true" ui:inject="Button_yellow_8" pad.b="1" />
-									<button id="bs_${i}" text="labels.chan.S_olo" height="20" fill="true" ui:inject="Button_green_8" />
-									<button id="bm_${i}" text="labels.chan.M_ute" height="20" fill="true" ui:inject="Button_red_8" />
+								<ui:with fill="true" height="20">
+									<button id="on_${i}" text="labels.act_ive" ui:inject="Button_cyan_8" pad.b="1" />
+									<button id="alr_${i}" text="labels.alr" ui:inject="Button_yellow_8" pad.b="1" />
+									<button id="bs_${i}" text="labels.chan.S_olo" ui:inject="Button_green_8" />
+									<button id="bm_${i}" text="labels.chan.M_ute" ui:inject="Button_red_8" />
+								</ui:with>
 							</grid>
 						</cell>
 
 						<cell rows="2" pad.h="6" >
 							<hbox hfill="false">
-								<ui:if test=":i ile 1">
-									<knob id="sf_${:i-1}" value="1" editable="false" pointer="arrow" size="22" scolor="cycle" />
-								</ui:if>
 								<ui:if test=":i igt 1">
-									<knob id="sf_${:i-1}" size="22" scolor="cycle" scolor.hue="${(:i-1) * 0.125}"/>
+									<knob id="sf_${:i-1}" pad.r="4" size="22" scolor="(!${act_ch}) ? 'cycle_inactive' : 'cycle'" scolor.hue="${(:i-1) * 0.125}"/>
 								</ui:if>
-								<vbox vfill="false" pad.l="4" width.min="30">
+								<vbox vfill="false" width.min="30">
 									<ui:if test=":i ile 1">
 										<label text="0" />
 										<value id="bfe_${i}" detailed="false" />
@@ -355,35 +368,47 @@
 							</hbox>
 						</cell>
 <ui:with pad.t="4" size="16">
-						<knob id="aat_${i}" scolor="attack_1"/>
-						<knob id="art_${i}" scolor="release_1"/>
-						<knob id="akn_${i}" />
+						<knob id="aat_${i}" scolor="(!${act_ch}) ? 'cycle_inactive' : 'attack_1'"/>
+						<knob id="art_${i}" scolor="(!${act_ch}) ? 'cycle_inactive' : 'release_1'"/>
+						<knob id="akn_${i}" scolor="(!${act_ch}) ? 'cycle_inactive' : 'kscale'"/>
 
-						<knob id="bpa_${i}" />
+						<knob id="bpa_${i}" scolor="(!${act_ch}) ? 'cycle_inactive' : 'kscale'"/>
 					</ui:with>
 						<cell rows="2" >
 							<vbox fill="false" pad.h="6" pad.v="4">
 								<combo id="lm_${i}" pad.b="4" />
-								<button id="gb_${i}"  height="19" hfill="true" text="labels.boost_" ui:inject="Button_violet_8"/>
+								<button id="gb_${i}"  height="19" hfill="true" text="labels.boost_" ui:inject="Button_gray_8" visibility="(!${act_ch})" />
+								<button id="gb_${i}"  height="19" hfill="true" text="labels.boost_" ui:inject="Button_violet_8" visibility="(${act_ch})"/>
 							</vbox>
 						</cell>
 						<ui:with pad.t="4" size="16">
-						<knob id="th_${i}" meter.visibility="true" meter.max=":ig_${i}" scolor="threshold"/>
-						<knob id="at_${i}" scolor="attack" />
-						<knob id="rt_${i}" scolor="release" />
-						<knob id="bsl_${i}" scolor="balance"/>
-						<knob id="bmk_${i}" />
+							<hbox>
+						<knob id="th_${i}" ui:inject="Knob_meter_threshold" meter.max=":ig_${i}" visibility="${act_ch}"/>
+						<knob id="th_${i}" scolor="cycle_inactive" visibility="!${act_ch}"/>
+					</hbox>
+						<knob id="at_${i}" scolor="(!${act_ch}) ? 'cycle_inactive' : 'attack'" />
+						<knob id="rt_${i}" scolor="(!${act_ch}) ? 'cycle_inactive' : 'release'" />
+						<knob id="bsl_${i}" scolor="(!${act_ch}) ? 'cycle_inactive' : 'balance'"/>
+						<knob id="bmk_${i}" scolor="(!${act_ch}) ? 'cycle_inactive' : 'kscale'"/>
 						</ui:with>
-						<cell rows="2" pad.r="6" pad.v="4" hexpand="true">
+						<cell rows="2" pad.r="4" pad.v="4" hexpand="true">
 							<ledmeter height.min="5" >
 								<ledchannel
 									id="rlm_${i}l" min="-48 db" max="0 db" log="true"
-									balance="0 db" balance.visibility="true" type="peak"
-									peak.visibility="true" value.color="blue" />
+									balance="0 db"
+									balance.visibility="true"
+									type="peak"
+									peak.visibility="true"
+									value.color="${act_ch} ? 'blue' : 'cycle_inactive'"
+									balance.color="${act_ch} ? 'yellow' : 'cycle_inactive'"/>
 								<ledchannel
 									id="rlm_${i}r" min="-48 db" max="0 db" log="true"
-									balance="0 db" balance.visibility="true" type="peak"
-									peak.visibility="true" value.color="blue" />
+									balance="0 db"
+									balance.visibility="true"
+									type="peak"
+									peak.visibility="true"
+									value.color="${act_ch} ? 'blue' : 'cycle_inactive'"
+									balance.color="${act_ch} ? 'yellow' : 'cycle_inactive'"/>
 							</ledmeter>
 						</cell>
 
@@ -398,7 +423,7 @@
 						<value id="bsl_${i}" sline="true" />
 						<value id="bmk_${i}" sline="true" />
 					</ui:with>
-
+</ui:with>
 					</ui:for>
 
 				</grid>
@@ -454,6 +479,7 @@
 				<!-- Row 3 -->
 				<vbox>
 					<button id="gb" pad.h="6" height="18" width="70" text="labels.boost_" ui:inject="Button_violet_8"/>
+					<combo id="lm" pad.b="4" />
 					<button id="on" pad.h="6" height="18" width="70" text="labels.chan.on" ui:inject="Button_yellow"/>
 				</vbox>
 				<value id="at"/>

@@ -227,6 +227,7 @@ namespace lsp
                 virtual void            update_sample_rate(long sr) override;
                 virtual void            update_settings() override;
                 virtual void            process(size_t samples) override;
+                virtual void            ui_activated() override;
                 virtual bool            inline_display(plug::ICanvas *cv, size_t width, size_t height) override;
                 virtual void            dump(dspu::IStateDumper *v) const override;
         };

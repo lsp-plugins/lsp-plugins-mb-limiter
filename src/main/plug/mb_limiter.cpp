@@ -1535,6 +1535,21 @@ namespace lsp
             } // for channel
         }
 
+        void mb_limiter::ui_activated()
+        {
+            // Force meshes with the UI to synchronized
+            for (size_t i=0; i<nChannels; ++i)
+            {
+                channel_t *c        = &vChannels[i];
+
+                for (size_t j=0; j<meta::mb_limiter::BANDS_MAX; ++j)
+                {
+                    band_t *b           = &c->vBands[j];
+                    b->bSync            = true;
+                }
+            }
+        }
+
         bool mb_limiter::inline_display(plug::ICanvas *cv, size_t width, size_t height)
         {
             // Check proportions

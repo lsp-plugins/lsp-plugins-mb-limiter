@@ -214,6 +214,8 @@ namespace lsp
                 static bool                     decode_filtering(size_t mode);
                 static size_t                   decode_dithering(size_t mode);
 
+                static void                     dump(dspu::IStateDumper *v, const char *name, const limiter_t *l);
+
             public:
                 explicit mb_limiter(const meta::plugin_t *meta);
                 virtual ~mb_limiter() override;

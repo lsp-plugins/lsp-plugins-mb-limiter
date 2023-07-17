@@ -26,6 +26,7 @@
 #include <lsp-plug.in/dsp-units/util/Oversampler.h>
 #include <lsp-plug.in/dsp-units/units.h>
 #include <lsp-plug.in/plug-fw/meta/func.h>
+#include <lsp-plug.in/shared/id_colors.h>
 
 #include <private/plugins/mb_limiter.h>
 
@@ -568,6 +569,13 @@ namespace lsp
                 }
 
                 vChannels       = NULL;
+            }
+
+            // Destroy inline display buffers
+            if (pIDisplay != NULL)
+            {
+                pIDisplay->destroy();
+                pIDisplay   = NULL;
             }
 
             // Destroy data
@@ -1527,15 +1535,269 @@ namespace lsp
             } // for channel
         }
 
-        void mb_limiter::dump(dspu::IStateDumper *v) const
-        {
-            // TODO
-        }
-
         bool mb_limiter::inline_display(plug::ICanvas *cv, size_t width, size_t height)
         {
-            // TODO
-            return false;
+            // Check proportions
+            if (height > (M_RGOLD_RATIO * width))
+                height  = M_RGOLD_RATIO * width;
+
+            // Init canvas
+            if (!cv->init(width, height))
+                return false;
+            width   = cv->width();
+            height  = cv->height();
+
+            // Clear background
+            bool bypassing = vChannels[0].sBypass.bypassing();
+            cv->set_color_rgb((bypassing) ? CV_DISABLED : CV_BACKGROUND);
+            cv->paint();
+
+            // Draw axis
+            cv->set_line_width(1.0);
+
+            // "-72 db / (:zoom ** 3)" max="24 db * :zoom"
+
+            float miny  = logf(GAIN_AMP_M_72_DB / dsp::ipowf(fZoom, 3));
+            float maxy  = logf(GAIN_AMP_P_48_DB * fZoom * fZoom);
+
+            float zx    = 1.0f/SPEC_FREQ_MIN;
+            float zy    = dsp::ipowf(fZoom, 3)/GAIN_AMP_M_72_DB;
+            float dx    = width/(logf(SPEC_FREQ_MAX)-logf(SPEC_FREQ_MIN));
+            float dy    = height/(miny-maxy);
+
+            // Draw vertical lines
+            cv->set_color_rgb(CV_YELLOW, 0.5f);
+            for (float i=100.0f; i<SPEC_FREQ_MAX; i *= 10.0f)
+            {
+                float ax = dx*(logf(i*zx));
+                cv->line(ax, 0, ax, height);
+            }
+
+            // Draw horizontal lines
+            cv->set_color_rgb(CV_WHITE, 0.5f);
+            for (float i=GAIN_AMP_M_72_DB; i<GAIN_AMP_P_48_DB; i *= GAIN_AMP_P_12_DB)
+            {
+                float ay = height + dy*(logf(i*zy));
+                cv->line(0, ay, width, ay);
+            }
+
+            // Allocate buffer: f, x, y, tr
+            pIDisplay           = core::IDBuffer::reuse(pIDisplay, 4, width+2);
+            core::IDBuffer *b   = pIDisplay;
+            if (b == NULL)
+                return false;
+
+            static const uint32_t c_colors[] =
+            {
+                CV_MIDDLE_CHANNEL,
+                CV_LEFT_CHANNEL, CV_RIGHT_CHANNEL
+            };
+            const uint32_t *colors = (nChannels > 1) ? &c_colors[1] : &c_colors[0];
+
+            // Initialize mesh
+            b->v[0][0]          = SPEC_FREQ_MIN*0.5f;
+            b->v[0][width+1]    = SPEC_FREQ_MAX*2.0f;
+            b->v[3][0]          = 1.0f;
+            b->v[3][width+1]    = 1.0f;
+
+            bool aa = cv->set_anti_aliasing(true);
+            cv->set_line_width(2);
+
+            for (size_t i=0; i<nChannels; ++i)
+            {
+                channel_t *c    = &vChannels[i];
+
+                for (size_t j=0; j<width; ++j)
+                {
+                    size_t k        = (j*meta::mb_limiter::FFT_MESH_POINTS)/width;
+                    b->v[0][j+1]    = vFreqs[k];
+                    b->v[3][j+1]    = c->vTrOut[k];
+                }
+
+                dsp::fill(b->v[1], 0.0f, width+2);
+                dsp::fill(b->v[2], height, width+2);
+                dsp::axis_apply_log1(b->v[1], b->v[0], zx, dx, width+2);
+                dsp::axis_apply_log1(b->v[2], b->v[3], zy, dy, width+2);
+
+                // Draw mesh
+                uint32_t color = (bypassing || !(active())) ? CV_SILVER : colors[i];
+                Color stroke(color), fill(color, 0.5f);
+                cv->draw_poly(b->v[1], b->v[2], width+2, stroke, fill);
+            }
+            cv->set_anti_aliasing(aa);
+
+            return true;
+        }
+
+        void mb_limiter::dump(dspu::IStateDumper *v, const char *name, const limiter_t *l)
+        {
+            v->begin_object(name, l, sizeof(limiter_t));
+            {
+                v->write_object("sLimit", &l->sLimit);
+
+                v->write("bEnabled", l->bEnabled);
+                v->write("fStereoLink", l->fStereoLink);
+                v->write("fInLevel", l->fInLevel);
+                v->write("fReductionLevel", l->fReductionLevel);
+                v->write("vVcaBuf", l->vVcaBuf);
+
+                v->write("pEnable", l->pEnable);
+                v->write("pAlrOn", l->pAlrOn);
+                v->write("pAlrAttack", l->pAlrAttack);
+                v->write("pAlrRelease", l->pAlrRelease);
+                v->write("pAlrKnee", l->pAlrKnee);
+
+                v->write("pMode", l->pMode);
+                v->write("pThresh", l->pThresh);
+                v->write("pBoost", l->pBoost);
+                v->write("pAttack", l->pAttack);
+                v->write("pRelease", l->pRelease);
+                v->write("pInMeter", l->pInMeter);
+                v->write("pStereoLink", l->pStereoLink);
+                v->write("pReductionMeter", l->pReductionMeter);
+            }
+            v->end_object();
+        }
+
+        void mb_limiter::dump(dspu::IStateDumper *v) const
+        {
+            v->write_object("sAnalyzer", &sAnalyzer);
+            v->write("nChannels", nChannels);
+            v->write("bSidechain", bSidechain);
+            v->write("bExtSc", bExtSc);
+            v->write("bEnvUpdate", bEnvUpdate);
+            v->write("fInGain", fInGain);
+            v->write("fOutGain", fOutGain);
+            v->write("fZoom", fZoom);
+            v->write("nRealSampleRate", nRealSampleRate);
+            v->write("nEnvBoost", nEnvBoost);
+            v->write("nLookahead", nLookahead);
+
+            v->begin_array("vChannels", vChannels, nChannels);
+            {
+                //channel_t              *vChannels;          // Channels
+                for (size_t i=0; i<nChannels; ++i)
+                {
+                    const channel_t *c      = &vChannels[i];
+                    v->begin_object(c, sizeof(channel_t));
+                    {
+                        v->write_object("sBypass", &c->sBypass);
+                        v->write_object("sDither", &c->sDither);
+                        v->write_object("sOver", &c->sOver);
+                        v->write_object("sScOver", &c->sScOver);
+                        v->write_object("sScBoost", &c->sScBoost);
+                        v->write_object("sDataDelayMB", &c->sDataDelayMB);
+                        v->write_object("sDataDelaySB", &c->sDataDelaySB);
+                        v->write_object("sDryDelay", &c->sDryDelay);
+
+                        v->begin_array("vBands", meta::mb_limiter::BANDS_MAX);
+                        {
+                            for (size_t j=0; j<meta::mb_limiter::BANDS_MAX; ++j)
+                            {
+                                const band_t *b     = &c->vBands[j];
+
+                                v->write_object("sEq", &b->sEq);
+                                v->write_object("sPassFilter", &b->sPassFilter);
+                                v->write_object("sRejFilter", &b->sRejFilter);
+                                v->write_object("sAllFilter", &b->sAllFilter);
+
+                                dump(v, "sLimiter", &b->sLimiter);
+
+                                v->write("bSync", b->bSync);
+                                v->write("bMute", b->bMute);
+                                v->write("bSolo", b->bSolo);
+                                v->write("bEnabled", b->bEnabled);
+                                v->write("fPreamp", b->fPreamp);
+                                v->write("fFreqStart", b->fFreqStart);
+                                v->write("fFreqEnd", b->fFreqEnd);
+                                v->write("fMakeup", b->fMakeup);
+
+                                v->write("vTrOut", b->vTrOut);
+
+                                v->write("pFreqEnd", b->pFreqEnd);
+                                v->write("pSolo", b->pSolo);
+                                v->write("pMute", b->pMute);
+                                v->write("pPreamp", b->pPreamp);
+                                v->write("pMakeup", b->pMakeup);
+                                v->write("pBandGraph", b->pBandGraph);
+                            }
+                        }
+                        v->end_array();
+
+                        v->writev("vPlan", c->vPlan, meta::mb_limiter::BANDS_MAX);
+                        dump(v, "sLimiter", &c->sLimiter);
+
+                        v->write("vIn", c->vIn);
+                        v->write("vSc", c->vSc);
+                        v->write("vOut", c->vOut);
+                        v->write("vData", c->vData);
+                        v->write("vInBuf", c->vInBuf);
+                        v->write("vScBuf", c->vScBuf);
+                        v->write("vDataBuf", c->vDataBuf);
+                        v->write("vTrOut", c->vTrOut);
+                        v->write("bFftIn", c->bFftIn);
+                        v->write("bFftOut", c->bFftOut);
+                        v->write("nAnInChannel", c->nAnInChannel);
+                        v->write("nAnOutChannel", c->nAnOutChannel);
+
+                        v->write("pIn", c->pIn);
+                        v->write("pOut", c->pOut);
+                        v->write("pSc", c->pSc);
+                        v->write("pFftInEnable", c->pFftInEnable);
+                        v->write("pFftOutEnable", c->pFftOutEnable);
+                        v->write("pInMeter", c->pInMeter);
+                        v->write("pOutMeter", c->pOutMeter);
+                        v->write("pFftIn", c->pFftIn);
+                        v->write("pFftOut", c->pFftOut);
+                        v->write("pFilterGraph", c->pFilterGraph);
+                    }
+                    v->end_object();
+                }
+            }
+            v->end_array();
+
+            v->write("vTmpBuf", vTmpBuf);
+            v->write("vEnvBuf", vEnvBuf);
+            v->write("vIndexes", vIndexes);
+            v->write("vFreqs", vFreqs);
+            v->write("vTr", vTr);
+            v->write("vTrTmp", vTrTmp);
+            v->write("vFc", vFc);
+            v->write("pIDisplay", pIDisplay);
+
+            v->begin_array("vSplits", vSplits, meta::mb_limiter::BANDS_MAX-1);
+            {
+                for (size_t i=0; i<(meta::mb_limiter::BANDS_MAX-1); ++i)
+                {
+                    const split_t *s = &vSplits[i];
+                    v->begin_object(s, sizeof(split_t));
+                    {
+                        v->write("bEnabled", s->bEnabled);
+                        v->write("fFreq", s->fFreq);
+                        v->write("pEnabled", s->pEnabled);
+                        v->write("pFreq", s->pFreq);
+                    }
+                    v->end_object();
+                }
+            }
+            v->end_array();
+
+            v->writev("vPlan", vPlan, meta::mb_limiter::BANDS_MAX);
+            v->write("nPlanSize", nPlanSize);
+
+            v->write("pBypass", pBypass);
+            v->write("pInGain", pInGain);
+            v->write("pOutGain", pOutGain);
+            v->write("pLookahead", pLookahead);
+            v->write("pOversampling", pOversampling);
+            v->write("pDithering", pDithering);
+            v->write("pEnvBoost", pEnvBoost);
+            v->write("pZoom", pZoom);
+            v->write("pReactivity", pReactivity);
+            v->write("pShift", pShift);
+            v->write("pExtSc", pExtSc);
+
+            v->write("pData", pData);
         }
 
     } /* namespace plugins */

@@ -1,7 +1,7 @@
 {
 	"mb_limiter": {
-		"name": "Plugin Template",
-		"description": "TODO: write description"
+		"name": "Multiband Limiter",
+		"description": "Implements a multiband brick-wall limiter with flexible configuration. It prevents input signal from raising over the specified Threshold"
 	}
 }
 

@@ -319,7 +319,7 @@ namespace lsp
             "Multiband Limiter",
             B_DYNAMICS,
             "", // TODO: provide ID of the video on YouTube
-            "" // TODO: write plugin description, should be the same to the english version in 'bundles.json'
+            "Implements a multiband brick-wall limiter with flexible configuration. It prevents input signal from raising over the specified Threshold"
         };
 
         const plugin_t mb_limiter_mono =

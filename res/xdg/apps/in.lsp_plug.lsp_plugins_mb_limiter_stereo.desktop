@@ -1,0 +1,15 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=Multiband Limiter Stereo
+GenericName=Multiband Limiter
+GenericName[ru]=Многополосный лимитер
+Comment=Implements a multiband brick-wall limiter with flexible configuration. It prevents input stereo signal from raising over the specified Threshold.
+Comment[ru]=Реализует лимитер с жёсткой верхней границей. Предотвращает превышение стереосигналом заданного порогового уровня. Имеет дополнительный вход для гибко конфигурируемой боковой цепи управления.
+Exec=lsp-plugins-mb-limiter-stereo
+Icon=lsp-plugins
+Terminal=false
+StartupNotify=false
+Keywords=audio;sound;jackd;lsp-plugins;
+Categories=X-LSP-Plugins;
+NotShowIn=GNOME;

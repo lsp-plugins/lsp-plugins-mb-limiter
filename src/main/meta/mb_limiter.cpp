@@ -317,8 +317,8 @@ namespace lsp
         {
             "mb_limiter",
             "Multiband Limiter",
-            B_DYNAMICS,
-            "", // TODO: provide ID of the video on YouTube
+            B_MB_DYNAMICS,
+            "_0VjhooWRBQ",
             "Implements a multiband brick-wall limiter with flexible configuration. It prevents input signal from raising over the specified Threshold"
         };
 

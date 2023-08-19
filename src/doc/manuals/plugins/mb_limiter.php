@@ -40,6 +40,15 @@ words: the more work should be done, the more CPU resources will be used. Beware
         Setting these values larger than allowed automatically makes them considered to be set to maximum possible values.
     </li>
 </ul>
+<li>Additional <b>Linear Phase</b> mode allows to split audio signal into multiple frequency bands with linear phase shift.
+This introduces additional latency but gives several benefits:</li>
+<ul>
+	<li>Unlike classic crossovers which use IIR (Infinite Impulse Response) filters to split signal into multiple bands and shift the phase
+	of the audio signal at band split points, the <b>Linear Phase</b> allows to use FIR (Finite Impulse Response) filters which are deprived of this.
+	<li>Unlike most IIR filters which are designed using bilinear transform, linear phase filters allow to simulate their tranfer function
+	to look like the transfer function of analog filters, without deforming it's magnitude envelope near the nyquist frequency.</li>
+	<li>Unlike design of classic Linkwitz-Riley filters, the design of IIR filters provides shorter transition zone of the filter.</li>
+</ul>
 
 <p>Simplified peak processing example is shown on the following picture:</p>
 <?php out_image('graph/limiter-reduction', 'Simplified peak processing example') ?>
@@ -71,6 +80,11 @@ words: the more work should be done, the more CPU resources will be used. Beware
 	<li>
 		<b>Bypass</b> - bypass switch, when turned on (led indicator is shining), the plugin bypasses signal.
 	</li>
+	<li><b>Mode</b> - combo box that allows to switch between the following modes:</li>
+	<ul>
+		<li><b>Classic</b> - classic operating mode using IIR filters and allpass filters to compensate phase shifts.</li>
+		<li><b>Linear Phase</b> - linear phase operating mode using FFT transform (FIR filters) to split signal into multiple bands, introduces additional latency.</li>
+	</ul>
 	<li><b>SC Boost</b> - enables addidional boost of the sidechain signal:</li>
 	<ul>
 		<li><b>None</b> - no sidechain boost is applied.</li>

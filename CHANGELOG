@@ -3,6 +3,7 @@
 *******************************************************************************
 
 === 1.0.1 ===
+* Implemented Linear Phase mode.
 * Updated build scripts and dependencies.
 
 === 1.0.0 ===

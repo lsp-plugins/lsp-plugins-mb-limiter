@@ -199,21 +199,20 @@
 		</cell>
 
 		<!-- Row 2: bottom line -->
-		<hbox vreduce="true"  bg.color="bg_schema" pad.h="6">
-			<label text="labels.mode:" pad.r="4"/>
+		<hbox spacing="4" vreduce="true" bg.color="bg_schema" pad.l="6">
+			<label text="labels.mode:"/>
 			<combo id="mode" pad.r="8"/>
-			<label text="labels.sc_boost:" pad.r="4"/>
+			<label text="labels.sc_boost:"/>
 			<combo id="envb" pad.r="8"/>
-			<label text="labels.oversampling:" pad.r="4"/>
+			<label text="labels.oversampling:"/>
 			<combo id="ovs" pad.r="8" pad.v="4"/>
-			<label text="labels.dither:" pad.r="4"/>
+			<label text="labels.dither:"/>
 			<combo id="dither" pad.r="8" pad.v="4"/>
 			<button id="flt" text="labels.filters" size="22" ui:inject="Button_cyan"/>
 			<void hexpand="true" hfill="true"/>
-
 			<hbox bg.color="bg_schema" hreduce="true" pad.h="6" visibility="ex :extsc">
-				<vsep pad.h="2" bg.color="bg" reduce="true" />
-				<button id="extsc" size="22" text="labels.sc.External_sidechain" ui:inject="Button_orange"/>
+				<void pad.h="2" bg.color="bg" reduce="true" />
+				<button id="extsc" size="22" text="labels.sc.External_sidechain" ui:inject="Button_orange" pad.l="6"/>
 			</hbox>
 		</hbox>
 

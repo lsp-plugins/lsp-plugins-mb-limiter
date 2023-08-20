@@ -1447,7 +1447,8 @@ namespace lsp
                 oversample_data(count);
                 for (size_t i=0; i<nChannels; ++i)
                     compute_multiband_vca_gain(&vChannels[i], ovs_count);
-                process_multiband_stereo_link(ovs_count);
+                if (nChannels > 1)
+                    process_multiband_stereo_link(ovs_count);
                 for (size_t i=0; i<nChannels; ++i)
                     apply_multiband_vca_gain(&vChannels[i], ovs_count);
 

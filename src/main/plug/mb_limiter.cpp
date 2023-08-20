@@ -20,6 +20,7 @@
  */
 
 #include <lsp-plug.in/common/alloc.h>
+#include <lsp-plug.in/common/bits.h>
 #include <lsp-plug.in/common/debug.h>
 #include <lsp-plug.in/dsp/dsp.h>
 #include <lsp-plug.in/dsp-units/misc/envelope.h>
@@ -66,6 +67,7 @@ namespace lsp
             Module(meta)
         {
             nChannels           = 1;
+            nMode               = XOVER_CLASSIC;
             bSidechain          = false;
 
             if ((!strcmp(meta->uid, meta::mb_limiter_stereo.uid)) ||
@@ -113,6 +115,7 @@ namespace lsp
             pBypass             = NULL;
             pInGain             = NULL;
             pOutGain            = NULL;
+            pMode               = NULL;
             pLookahead          = NULL;
             pOversampling       = NULL;
             pDithering          = NULL;
@@ -159,6 +162,7 @@ namespace lsp
                     szof_ovs_buf +              // vVcaBuf
                     meta::mb_limiter::BANDS_MAX * (
                         szof_fft_graph +        // vTrOut
+                        szof_ovs_buf +          // vDataBuf
                         szof_ovs_buf            // vVcaBuf
                     )
                 );
@@ -177,6 +181,7 @@ namespace lsp
             uint8_t *ptr            = alloc_aligned<uint8_t>(pData, to_alloc);
             if (ptr == NULL)
                 return;
+            lsp_guard_assert( const uint8_t *tail = &ptr[to_alloc]; );
 
             // Allocate objects
             vChannels               = reinterpret_cast<channel_t *>(ptr);
@@ -207,6 +212,8 @@ namespace lsp
 
                 // Initialize channel
                 c->sBypass.construct();
+                c->sFFTXOver.construct();
+                c->sFFTScXOver.construct();
                 c->sDither.construct();
                 c->sOver.construct();
                 c->sScOver.construct();
@@ -229,8 +236,6 @@ namespace lsp
                 if (!c->sDataDelayMB.init(dspu::millis_to_samples(MAX_SAMPLE_RATE * meta::mb_limiter::OVERSAMPLING_MAX, lk_latency) + BUFFER_SIZE))
                     return;
                 if (!c->sDataDelaySB.init(dspu::millis_to_samples(MAX_SAMPLE_RATE * meta::mb_limiter::OVERSAMPLING_MAX, lk_latency) + BUFFER_SIZE))
-                    return;
-                if (!c->sDryDelay.init(dspu::millis_to_samples(MAX_SAMPLE_RATE, lk_latency*2 + c->sOver.max_latency())))
                     return;
 
                 // Init main limiter
@@ -325,6 +330,8 @@ namespace lsp
                     b->fFreqEnd         = 0.0f;
                     b->fMakeup          = GAIN_AMP_0_DB;
 
+                    b->vDataBuf         = reinterpret_cast<float *>(ptr);
+                    ptr                += szof_ovs_buf;
                     b->vTrOut           = reinterpret_cast<float *>(ptr);
                     ptr                += szof_fft_graph;
 
@@ -367,6 +374,8 @@ namespace lsp
                 }
             }
 
+            lsp_assert( ptr <= tail );
+
             // Bind ports
             size_t port_id      = 0;
             lsp_trace("Binding audio channels");
@@ -382,6 +391,7 @@ namespace lsp
             pBypass             = TRACE_PORT(ports[port_id++]);
             pInGain             = TRACE_PORT(ports[port_id++]);
             pOutGain            = TRACE_PORT(ports[port_id++]);
+            pMode               = TRACE_PORT(ports[port_id++]);
             pLookahead          = TRACE_PORT(ports[port_id++]);
             pOversampling       = TRACE_PORT(ports[port_id++]);
             pDithering          = TRACE_PORT(ports[port_id++]);
@@ -546,6 +556,8 @@ namespace lsp
                     channel_t *c    = &vChannels[i];
 
                     c->sBypass.destroy();
+                    c->sFFTXOver.destroy();
+                    c->sFFTScXOver.destroy();
                     c->sDither.destroy();
                     c->sOver.destroy();
                     c->sScOver.destroy();
@@ -586,8 +598,21 @@ namespace lsp
             }
         }
 
+        size_t mb_limiter::select_fft_rank(size_t sample_rate)
+        {
+            const size_t k = (sample_rate + meta::mb_limiter::FFT_XOVER_FREQ_MIN/2) / meta::mb_limiter::FFT_XOVER_FREQ_MIN;
+            const size_t n = int_log2(k);
+            return meta::mb_limiter::FFT_XOVER_RANK_MIN + n;
+        }
+
         void mb_limiter::update_sample_rate(long sr)
         {
+            size_t fft_rank     = select_fft_rank(sr * meta::mb_limiter::OVERSAMPLING_MAX);
+            size_t bins         = 1 << fft_rank;
+            float lk_latency        =
+                floorf(dspu::samples_to_millis(MAX_SAMPLE_RATE, meta::mb_limiter::OVERSAMPLING_MAX)) +
+                meta::mb_limiter::LOOKAHEAD_MAX + 1.0f;
+
             // Update analyzer's sample rate
             sAnalyzer.set_sample_rate(sr);
 
@@ -596,9 +621,26 @@ namespace lsp
             {
                 channel_t *c = &vChannels[i];
 
+                size_t max_lat      = dspu::millis_to_samples(MAX_SAMPLE_RATE, lk_latency*2 + c->sOver.max_latency()) + bins;
+
                 c->sBypass.init(sr);
                 c->sOver.set_sample_rate(sr);
                 c->sScBoost.set_sample_rate(sr);
+                c->sDryDelay.init(max_lat);
+
+                // Need to re-initialize FFT crossovers?
+                if (fft_rank != c->sFFTXOver.rank())
+                {
+                    c->sFFTXOver.init(fft_rank, meta::mb_limiter::BANDS_MAX);
+                    c->sFFTScXOver.init(fft_rank, meta::mb_limiter::BANDS_MAX);
+                    for (size_t j=0; j<meta::mb_limiter::BANDS_MAX; ++j)
+                    {
+                        c->sFFTXOver.set_handler(j, process_band, this, c);
+                        c->sFFTScXOver.set_handler(j, process_sc_band, this, c);
+                    }
+                    c->sFFTXOver.set_phase(float(i) / float(nChannels));
+                    c->sFFTScXOver.set_phase(float(i + 0.5f) / float(nChannels));
+                }
 
                 // Update bands
                 for (size_t j=0; j<meta::mb_limiter::BANDS_MAX; ++j)
@@ -773,6 +815,22 @@ namespace lsp
                 rebuild_bands       = true;
             }
 
+            // Determine work mode: classic, modern or linear phase
+            xover_mode_t xover          = xover_mode_t(pMode->value());
+            size_t fft_rank             = select_fft_rank(nRealSampleRate);
+            if ((xover != nMode) || ((xover == XOVER_LINEAR_PHASE) && (fft_rank != vChannels[0].sFFTXOver.rank())))
+            {
+                nMode               = xover;
+                rebuild_bands       = true;
+                for (size_t i=0; i<nChannels; ++i)
+                {
+                    channel_t *c        = &vChannels[i];
+                    c->sDryDelay.clear();
+                    c->sFFTXOver.clear();
+                    c->sFFTScXOver.clear();
+                }
+            }
+
             // Store gain
             bExtSc              = (pExtSc != NULL) ? (pExtSc->value() >= 0.5f) : false;
             fInGain             = pInGain->value();
@@ -855,6 +913,10 @@ namespace lsp
 
                 // Update bypass settings
                 c->sBypass.set_bypass(pBypass->value());
+                c->sFFTXOver.set_rank(fft_rank);
+                c->sFFTScXOver.set_rank(fft_rank);
+                c->sFFTXOver.set_sample_rate(nRealSampleRate);
+                c->sFFTScXOver.set_sample_rate(nRealSampleRate);
 
                 // Update analyzer settings
                 c->bFftIn       = c->pFftInEnable->value() >= 0.5f;
@@ -1040,6 +1102,7 @@ namespace lsp
                     for (size_t j=0; j < nPlanSize; ++j)
                     {
                         band_t *b       = c->vPlan[j];
+                        size_t band     = b - c->vBands;
 
                         b->sEq.set_sample_rate(nRealSampleRate);
 
@@ -1048,85 +1111,170 @@ namespace lsp
 //                        lsp_trace("[%d]: %f - %f", int(j), b->fFreqStart, b->fFreqEnd);
                         b->pFreqEnd->set_value(b->fFreqEnd);
 
-                        // Configure lo-pass sidechain filter
-                        fp.nType        = (j < (nPlanSize - 1)) ? dspu::FLT_BT_LRX_LOPASS : dspu::FLT_NONE;
-                        fp.fFreq        = b->fFreqEnd;
-                        fp.fFreq2       = fp.fFreq;
-                        fp.fQuality     = 0.0f;
-                        fp.fGain        = 1.0f;
-                        fp.fQuality     = 0.0f;
-                        fp.nSlope       = meta::mb_limiter::FILTER_SLOPE;
-
-                        b->sEq.set_params(0, &fp);
-
-                        // Configure hi-pass sidechain filter
-                        fp.nType        = (j > 0) ? dspu::FLT_BT_LRX_HIPASS : dspu::FLT_NONE;
-                        fp.fFreq        = b->fFreqStart;
-                        fp.fFreq2       = fp.fFreq;
-                        fp.fQuality     = 0.0f;
-                        fp.fGain        = 1.0f;
-                        fp.fQuality     = 0.0f;
-                        fp.nSlope       = meta::mb_limiter::FILTER_SLOPE;
-
-                        b->sEq.set_params(1, &fp);
-
-                        // Update transfer function for equalizer
-                        b->sEq.freq_chart(vTr, vFreqs, meta::mb_limiter::FFT_MESH_POINTS);
-                        dsp::pcomplex_mod(b->vTrOut, vTr, meta::mb_limiter::FFT_MESH_POINTS);
-
-                        // Update filter parameters
-                        fp.fGain        = 1.0f;
-                        fp.nSlope       = meta::mb_limiter::FILTER_SLOPE;
-                        fp.fQuality     = 0.0f;
-                        fp.fFreq        = b->fFreqEnd;
-                        fp.fFreq2       = b->fFreqEnd;
-
-                        // We're going from low frequencies to high frequencies
-                        if (j >= (nPlanSize - 1))
+                        if (nMode == XOVER_CLASSIC)
                         {
-                            fp.nType    = dspu::FLT_NONE;
-                            b->sPassFilter.update(fSampleRate, &fp);
-                            b->sRejFilter.update(fSampleRate, &fp);
-                            b->sAllFilter.update(fSampleRate, &fp);
-                        }
-                        else
-                        {
-                            fp.nType    = dspu::FLT_BT_LRX_LOPASS;
-                            b->sPassFilter.update(fSampleRate, &fp);
-                            fp.nType    = dspu::FLT_BT_LRX_HIPASS;
-                            b->sRejFilter.update(fSampleRate, &fp);
-                            fp.nType    = (j == 0) ? dspu::FLT_NONE : dspu::FLT_BT_LRX_ALLPASS;
-                            b->sAllFilter.update(fSampleRate, &fp);
-                        }
+                            // Configure lo-pass sidechain filter
+                            fp.nType        = (j < (nPlanSize - 1)) ? dspu::FLT_BT_LRX_LOPASS : dspu::FLT_NONE;
+                            fp.fFreq        = b->fFreqEnd;
+                            fp.fFreq2       = fp.fFreq;
+                            fp.fQuality     = 0.0f;
+                            fp.fGain        = 1.0f;
+                            fp.fQuality     = 0.0f;
+                            fp.nSlope       = meta::mb_limiter::FILTER_SLOPE;
 
-                        b->sPassFilter.set_sample_rate(nRealSampleRate);
-                        b->sRejFilter.set_sample_rate(nRealSampleRate);
-                        b->sAllFilter.set_sample_rate(nRealSampleRate);
+                            b->sEq.set_params(0, &fp);
+
+                            // Configure hi-pass sidechain filter
+                            fp.nType        = (j > 0) ? dspu::FLT_BT_LRX_HIPASS : dspu::FLT_NONE;
+                            fp.fFreq        = b->fFreqStart;
+                            fp.fFreq2       = fp.fFreq;
+                            fp.fQuality     = 0.0f;
+                            fp.fGain        = 1.0f;
+                            fp.fQuality     = 0.0f;
+                            fp.nSlope       = meta::mb_limiter::FILTER_SLOPE;
+
+                            b->sEq.set_params(1, &fp);
+
+                            // Update transfer function for equalizer
+                            b->sEq.freq_chart(vTr, vFreqs, meta::mb_limiter::FFT_MESH_POINTS);
+                            dsp::pcomplex_mod(b->vTrOut, vTr, meta::mb_limiter::FFT_MESH_POINTS);
+
+                            // Update filter parameters
+                            fp.fGain        = 1.0f;
+                            fp.nSlope       = meta::mb_limiter::FILTER_SLOPE;
+                            fp.fQuality     = 0.0f;
+                            fp.fFreq        = b->fFreqEnd;
+                            fp.fFreq2       = b->fFreqEnd;
+
+                            // We're going from low frequencies to high frequencies
+                            if (j >= (nPlanSize - 1))
+                            {
+                                fp.nType    = dspu::FLT_NONE;
+                                b->sPassFilter.update(fSampleRate, &fp);
+                                b->sRejFilter.update(fSampleRate, &fp);
+                                b->sAllFilter.update(fSampleRate, &fp);
+                            }
+                            else
+                            {
+                                fp.nType    = dspu::FLT_BT_LRX_LOPASS;
+                                b->sPassFilter.update(fSampleRate, &fp);
+                                fp.nType    = dspu::FLT_BT_LRX_HIPASS;
+                                b->sRejFilter.update(fSampleRate, &fp);
+                                fp.nType    = (j == 0) ? dspu::FLT_NONE : dspu::FLT_BT_LRX_ALLPASS;
+                                b->sAllFilter.update(fSampleRate, &fp);
+                            }
+
+                            b->sPassFilter.set_sample_rate(nRealSampleRate);
+                            b->sRejFilter.set_sample_rate(nRealSampleRate);
+                            b->sAllFilter.set_sample_rate(nRealSampleRate);
+                        }
+                        else // nMode == XOVER_LINEAR_PHASE
+                        {
+                            if (j > 0)
+                            {
+                                c->sFFTXOver.enable_hpf(band, true);
+                                c->sFFTXOver.set_hpf_frequency(band, b->fFreqStart);
+                                c->sFFTXOver.set_hpf_slope(band, -96.0f);
+
+                                c->sFFTScXOver.enable_hpf(band, true);
+                                c->sFFTScXOver.set_hpf_frequency(band, b->fFreqStart);
+                                c->sFFTScXOver.set_hpf_slope(band, -96.0f);
+                            }
+                            else
+                            {
+                                c->sFFTXOver.disable_hpf(band);
+                                c->sFFTScXOver.disable_hpf(band);
+                            }
+
+                            if (j < (nPlanSize-1))
+                            {
+                                c->sFFTXOver.enable_lpf(band, true);
+                                c->sFFTXOver.set_lpf_frequency(band, b->fFreqEnd);
+                                c->sFFTXOver.set_lpf_slope(band, -96.0f);
+                                c->sFFTScXOver.enable_lpf(band, true);
+                                c->sFFTScXOver.set_lpf_frequency(band, b->fFreqEnd);
+                                c->sFFTScXOver.set_lpf_slope(band, -96.0f);
+                            }
+                            else
+                            {
+                                c->sFFTXOver.disable_lpf(band);
+                                c->sFFTScXOver.disable_lpf(band);
+                            }
+
+                            // Update transfer function
+                            c->sFFTScXOver.freq_chart(band, vTr, vFreqs, meta::mb_limiter::FFT_MESH_POINTS);
+                            dsp::copy(b->vTrOut, vTr, meta::mb_limiter::FFT_MESH_POINTS);
+                        }
+                    } // nPlanSize
+
+                    // Enable/disable bands
+                    for (size_t j=0; j < meta::mb_limiter::BANDS_MAX; ++j)
+                    {
+                        bool band_on = (j > 0) ? vSplits[j-1].bEnabled : true;
+                        c->sFFTXOver.enable_band(j, band_on);
+                        c->sFFTScXOver.enable_band(j, band_on);
                     }
-                } // nPlanSize
+                }
             }
 
-            nEnvBoost           = env_boost;
-            bEnvUpdate          = false;
+            nEnvBoost               = env_boost;
+            bEnvUpdate              = false;
 
             // Report latency
-            set_latency(nLookahead * 2 + vChannels[0].sOver.latency());
+            size_t t_over           = vChannels[0].sOver.get_oversampling();
+            size_t latency          = (nLookahead * 2) / t_over + vChannels[0].sOver.latency();
+            size_t xover_latency    = (nMode == XOVER_LINEAR_PHASE) ? vChannels[0].sFFTXOver.latency()/t_over : 0;
+            set_latency(latency + xover_latency);
+
+            for (size_t i=0; i<nChannels; ++i)
+            {
+                channel_t *c            = &vChannels[i];
+                c->sDryDelay.set_delay(latency + xover_latency);
+            }
+        }
+
+        void mb_limiter::process_band(void *object, void *subject, size_t band, const float *data, size_t sample, size_t count)
+        {
+            channel_t *c            = static_cast<channel_t *>(subject);
+            band_t *b               = &c->vBands[band];
+
+            // Store data to band's buffer
+            dsp::copy(&b->vDataBuf[sample], data, count);
+        }
+
+        void mb_limiter::process_sc_band(void *object, void *subject, size_t band, const float *data, size_t sample, size_t count)
+        {
+            channel_t *c            = static_cast<channel_t *>(subject);
+            band_t *b               = &c->vBands[band];
+
+            // Store data to band's buffer
+            dsp::mul_k3(&b->sLimiter.vVcaBuf[sample], data, b->fPreamp, count);
         }
 
         void mb_limiter::compute_multiband_vca_gain(channel_t *c, size_t samples)
         {
+            // Split single sidechain band into multiple
+            if (nMode == XOVER_CLASSIC)
+            {
+                for (size_t j=0; j<nPlanSize; ++j)
+                {
+                    band_t *b       = c->vPlan[j];
+                    b->sEq.process(b->sLimiter.vVcaBuf, c->vScBuf, samples);
+                    dsp::mul_k2(b->sLimiter.vVcaBuf, b->fPreamp, samples);
+                }
+            }
+            else // nMode == XOVER_LINEAR_PHASE
+                c->sFFTScXOver.process(c->vScBuf, samples);
+
             // Estimate the VCA gain for each band
             for (size_t j=0; j<nPlanSize; ++j)
             {
                 band_t *b       = c->vPlan[j];
 
-                // Prepare sidechain signal with band equalizers
-                b->sEq.process(vTmpBuf, c->vScBuf, samples);
-                dsp::mul_k2(vTmpBuf, b->fPreamp, samples);
-
-                b->sLimiter.fInLevel    = lsp_max(b->sLimiter.fInLevel, dsp::abs_max(vTmpBuf, samples));
+                // Pass sidechain signal through the limiter
+                b->sLimiter.fInLevel    = lsp_max(b->sLimiter.fInLevel, dsp::abs_max(b->sLimiter.vVcaBuf, samples));
                 if (b->sLimiter.bEnabled)
-                    b->sLimiter.sLimit.process(b->sLimiter.vVcaBuf, vTmpBuf, samples);
+                    b->sLimiter.sLimit.process(b->sLimiter.vVcaBuf, b->sLimiter.vVcaBuf, samples);
                 else
                     dsp::fill(b->sLimiter.vVcaBuf, (b->bMute) ? GAIN_AMP_M_INF_DB : GAIN_AMP_0_DB, samples);
             }
@@ -1148,16 +1296,10 @@ namespace lsp
 
         void mb_limiter::apply_multiband_vca_gain(channel_t *c, size_t samples)
         {
-            // Here, we apply VCA to input signal dependent on the input
-            // Apply delay to compensate lookahead feature
-            c->sDataDelayMB.process(vTmpBuf, c->vInBuf, samples);
-
-            // Originally, there is no signal
-            dsp::fill_zero(c->vDataBuf, samples);           // Clear the channel data buffer
-
-            for (size_t j=0; j<nPlanSize; ++j)
+            // Post-process VCA gain
+            for (size_t i=0; i<nPlanSize; ++i)
             {
-                band_t *b       = c->vPlan[j];
+                band_t *b       = c->vPlan[i];
 
                 // Compute gain reduction level
                 float reduction     = dsp::min(b->sLimiter.vVcaBuf, samples);
@@ -1168,12 +1310,41 @@ namespace lsp
                     dsp::fill_zero(b->sLimiter.vVcaBuf, samples);
                 else
                     dsp::mul_k2(b->sLimiter.vVcaBuf, b->fMakeup, samples);
+            }
 
-                // Do the crossover stuff
-                b->sAllFilter.process(c->vDataBuf, c->vDataBuf, samples);           // Process the signal with all-pass
-                b->sPassFilter.process(vEnvBuf, vTmpBuf, samples);                  // Filter frequencies from input
-                dsp::fmadd3(c->vDataBuf, vEnvBuf, b->sLimiter.vVcaBuf, samples);    // Apply VCA gain to band and add to output data buffer
-                b->sRejFilter.process(vTmpBuf, vTmpBuf, samples);                   // Filter frequencies from input
+            // Here, we apply VCA to input signal dependent on the input
+            // Apply delay to compensate lookahead feature
+            c->sDataDelayMB.process(vTmpBuf, c->vInBuf, samples);
+
+            // Originally, there is no signal
+            dsp::fill_zero(c->vDataBuf, samples);           // Clear the channel data buffer
+
+            if (nMode == XOVER_CLASSIC)
+            {
+                for (size_t j=0; j<nPlanSize; ++j)
+                {
+                    band_t *b       = c->vPlan[j];
+
+                    // Do the crossover stuff:
+                    // Process the signal with all-pass
+                    b->sAllFilter.process(c->vDataBuf, c->vDataBuf, samples);
+                    // Filter frequencies from input
+                    b->sPassFilter.process(vEnvBuf, vTmpBuf, samples);
+                    // Apply VCA gain to band and add to output data buffer
+                    dsp::fmadd3(c->vDataBuf, vEnvBuf, b->sLimiter.vVcaBuf, samples);
+                    // Filter frequencies from input
+                    b->sRejFilter.process(vTmpBuf, vTmpBuf, samples);
+                }
+            }
+            else // nMode == XOVER_LINEAR_PHASE
+            {
+                c->sFFTXOver.process(vTmpBuf, samples);
+                for (size_t j=0; j<nPlanSize; ++j)
+                {
+                    band_t *b       = c->vPlan[j];
+                    // Apply VCA gain to band and add to output data buffer
+                    dsp::fmadd3(c->vDataBuf, b->vDataBuf, b->sLimiter.vVcaBuf, samples);
+                }
             }
         }
 
@@ -1239,8 +1410,8 @@ namespace lsp
             {
                 channel_t *c        = &vChannels[i];
 
-                c->sDryDelay.process(vTmpBuf, c->vIn, samples);
-                c->sBypass.process(c->vOut, vTmpBuf, c->vData, samples);
+                c->sDryDelay.process(c->vInBuf, c->vIn, samples);
+                c->sBypass.process(c->vOut, c->vInBuf, c->vData, samples);
             }
         }
 
@@ -1287,10 +1458,10 @@ namespace lsp
 
                 // Post-process data
                 downsample_data(count);
-                perform_analysis(count);
 
                 // Output audio
                 output_audio(count);
+                perform_analysis(count);
 
                 // Update pointers
                 for (size_t i=0; i<nChannels; ++i)
@@ -1357,11 +1528,11 @@ namespace lsp
             for (size_t i=0; i<nChannels; ++i)
             {
                 channel_t *c            = &vChannels[i];
-                bufs[c->nAnInChannel]   = c->vIn;
+                bufs[c->nAnInChannel]   = c->vInBuf;
                 bufs[c->nAnOutChannel]  = c->vData;
 
                 c->pOutMeter->set_value(dsp::abs_max(c->vData, samples));
-                c->pInMeter->set_value(dsp::abs_max(c->vIn, samples) * fInGain);
+                c->pInMeter->set_value(dsp::abs_max(c->vInBuf, samples) * fInGain);
             }
 
             // Perform processing
@@ -1459,28 +1630,40 @@ namespace lsp
                 channel_t *c     = &vChannels[i];
 
                 // Calculate transfer function
-                dsp::pcomplex_fill_ri(vTrTmp, 1.0f, 0.0f, meta::mb_limiter::FFT_MESH_POINTS);
-                dsp::fill_zero(vTr, meta::mb_limiter::FFT_MESH_POINTS*2);
-
-                // Calculate transfer function
-                for (size_t j=0; j<nPlanSize; ++j)
+                if (nMode == XOVER_CLASSIC)
                 {
-                    band_t *b       = c->vPlan[j];
+                    dsp::pcomplex_fill_ri(vTrTmp, 1.0f, 0.0f, meta::mb_limiter::FFT_MESH_POINTS);
+                    dsp::fill_zero(vTr, meta::mb_limiter::FFT_MESH_POINTS*2);
 
-                    // Apply all-pass characteristics
-                    b->sAllFilter.freq_chart(vFc, vFreqs, meta::mb_limiter::FFT_MESH_POINTS);
-                    dsp::pcomplex_mul2(vTr, vFc, meta::mb_limiter::FFT_MESH_POINTS);
+                    for (size_t j=0; j<nPlanSize; ++j)
+                    {
+                        band_t *b       = c->vPlan[j];
 
-                    // Apply lo-pass filter characteristics
-                    b->sPassFilter.freq_chart(vFc, vFreqs, meta::mb_limiter::FFT_MESH_POINTS);
-                    dsp::pcomplex_mul2(vFc, vTrTmp, meta::mb_limiter::FFT_MESH_POINTS);
-                    dsp::fmadd_k3(vTr, vFc, b->sLimiter.fReductionLevel * b->fMakeup, meta::mb_limiter::FFT_MESH_POINTS*2);
+                        // Apply all-pass characteristics
+                        b->sAllFilter.freq_chart(vFc, vFreqs, meta::mb_limiter::FFT_MESH_POINTS);
+                        dsp::pcomplex_mul2(vTr, vFc, meta::mb_limiter::FFT_MESH_POINTS);
 
-                    // Apply hi-pass filter characteristics
-                    b->sRejFilter.freq_chart(vFc, vFreqs, meta::mb_limiter::FFT_MESH_POINTS);
-                    dsp::pcomplex_mul2(vTrTmp, vFc, meta::mb_limiter::FFT_MESH_POINTS);
+                        // Apply lo-pass filter characteristics
+                        b->sPassFilter.freq_chart(vFc, vFreqs, meta::mb_limiter::FFT_MESH_POINTS);
+                        dsp::pcomplex_mul2(vFc, vTrTmp, meta::mb_limiter::FFT_MESH_POINTS);
+                        dsp::fmadd_k3(vTr, vFc, b->sLimiter.fReductionLevel * b->fMakeup, meta::mb_limiter::FFT_MESH_POINTS*2);
+
+                        // Apply hi-pass filter characteristics
+                        b->sRejFilter.freq_chart(vFc, vFreqs, meta::mb_limiter::FFT_MESH_POINTS);
+                        dsp::pcomplex_mul2(vTrTmp, vFc, meta::mb_limiter::FFT_MESH_POINTS);
+                    }
+                    dsp::pcomplex_mod(c->vTrOut, vTr, meta::mb_limiter::FFT_MESH_POINTS);
                 }
-                dsp::pcomplex_mod(c->vTrOut, vTr, meta::mb_limiter::FFT_MESH_POINTS);
+                else
+                {
+                    dsp::fill_zero(vTr, meta::mb_limiter::FFT_MESH_POINTS);
+                    for (size_t j=0; j<nPlanSize; ++j)
+                    {
+                        band_t *b       = c->vPlan[j];
+                        dsp::fmadd_k3(vTr, b->vTrOut, b->sLimiter.fReductionLevel * b->fMakeup, meta::mb_limiter::FFT_MESH_POINTS);
+                    }
+                    dsp::copy(c->vTrOut, vTr, meta::mb_limiter::FFT_MESH_POINTS);
+                }
 
                 // Output FFT curve for input
                 plug::mesh_t *mesh            = (c->pFftIn != NULL) ? c->pFftIn->buffer<plug::mesh_t>() : NULL;
@@ -1678,6 +1861,7 @@ namespace lsp
         {
             v->write_object("sAnalyzer", &sAnalyzer);
             v->write("nChannels", nChannels);
+            v->write("nMode", nMode);
             v->write("bSidechain", bSidechain);
             v->write("bExtSc", bExtSc);
             v->write("bEnvUpdate", bEnvUpdate);
@@ -1697,6 +1881,8 @@ namespace lsp
                     v->begin_object(c, sizeof(channel_t));
                     {
                         v->write_object("sBypass", &c->sBypass);
+                        v->write_object("sFFTXOver", &c->sFFTXOver);
+                        v->write_object("sFFTScXOver", &c->sFFTScXOver);
                         v->write_object("sDither", &c->sDither);
                         v->write_object("sOver", &c->sOver);
                         v->write_object("sScOver", &c->sScOver);
@@ -1727,6 +1913,7 @@ namespace lsp
                                 v->write("fFreqEnd", b->fFreqEnd);
                                 v->write("fMakeup", b->fMakeup);
 
+                                v->write("vDataBuf", b->vDataBuf);
                                 v->write("vTrOut", b->vTrOut);
 
                                 v->write("pFreqEnd", b->pFreqEnd);
@@ -1803,6 +1990,7 @@ namespace lsp
             v->write("pBypass", pBypass);
             v->write("pInGain", pInGain);
             v->write("pOutGain", pOutGain);
+            v->write("pMode", pMode);
             v->write("pLookahead", pLookahead);
             v->write("pOversampling", pOversampling);
             v->write("pDithering", pDithering);

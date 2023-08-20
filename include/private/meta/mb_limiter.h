@@ -111,6 +111,9 @@ namespace lsp
             static constexpr size_t OVERSAMPLING_MAX        = 8;        // Maximum 8x oversampling
             static constexpr size_t FILTER_SLOPE            = 4;        // Filter slopeness
 
+            static constexpr size_t FFT_XOVER_RANK_MIN      = 12;
+            static constexpr size_t FFT_XOVER_FREQ_MIN      = 44100;
+
             enum oversampling_mode_t
             {
                 OVS_NONE,

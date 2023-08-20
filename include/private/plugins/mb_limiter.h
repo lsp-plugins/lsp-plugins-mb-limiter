@@ -29,6 +29,7 @@
 #include <lsp-plug.in/dsp-units/util/Analyzer.h>
 #include <lsp-plug.in/dsp-units/util/Delay.h>
 #include <lsp-plug.in/dsp-units/util/Dither.h>
+#include <lsp-plug.in/dsp-units/util/FFTCrossover.h>
 #include <lsp-plug.in/dsp-units/util/Oversampler.h>
 #include <lsp-plug.in/plug-fw/core/IDBuffer.h>
 #include <lsp-plug.in/plug-fw/plug.h>
@@ -49,6 +50,12 @@ namespace lsp
                 mb_limiter (const mb_limiter &);
 
             protected:
+                enum xover_mode_t
+                {
+                    XOVER_CLASSIC,
+                    XOVER_LINEAR_PHASE
+                };
+
                 typedef struct limiter_t
                 {
                     dspu::Limiter           sLimit;             // Limiter
@@ -93,6 +100,7 @@ namespace lsp
                     float                   fFreqEnd;           // End frequency of the band
                     float                   fMakeup;            // Makeup gain
 
+                    float                  *vDataBuf;           // Data buffer
                     float                  *vTrOut;             // Transfer function output
 
                     plug::IPort            *pFreqEnd;           // Frequency range end
@@ -115,6 +123,8 @@ namespace lsp
                 typedef struct channel_t
                 {
                     dspu::Bypass            sBypass;            // Bypass
+                    dspu::FFTCrossover      sFFTXOver;          // FFT crossover
+                    dspu::FFTCrossover      sFFTScXOver;        // FFT crossover for sidechain
                     dspu::Dither            sDither;            // Dither
                     dspu::Oversampler       sOver;              // Oversampler object for signal
                     dspu::Oversampler       sScOver;            // Sidechain oversampler object for signal
@@ -155,6 +165,7 @@ namespace lsp
             protected:
                 dspu::Analyzer          sAnalyzer;          // Analyzer
                 size_t                  nChannels;          // Number of channels
+                xover_mode_t            nMode;              // Operating mode
                 bool                    bSidechain;         // Sidechain switch is present
                 bool                    bExtSc;             // External sidechain turned on
                 bool                    bEnvUpdate;         // Request for envelope update
@@ -182,6 +193,7 @@ namespace lsp
                 plug::IPort            *pBypass;            // Bypass port
                 plug::IPort            *pInGain;            // Input gain
                 plug::IPort            *pOutGain;           // Output gain
+                plug::IPort            *pMode;              // Operating mode
                 plug::IPort            *pLookahead;         // Lookahead time
                 plug::IPort            *pOversampling;      // Oversampling
                 plug::IPort            *pDithering;         // Dithering
@@ -213,6 +225,9 @@ namespace lsp
                 static dspu::over_mode_t        decode_oversampling_mode(size_t mode);
                 static bool                     decode_filtering(size_t mode);
                 static size_t                   decode_dithering(size_t mode);
+                static size_t                   select_fft_rank(size_t sample_rate);
+                static void                     process_band(void *object, void *subject, size_t band, const float *data, size_t sample, size_t count);
+                static void                     process_sc_band(void *object, void *subject, size_t band, const float *data, size_t sample, size_t count);
 
                 static void                     dump(dspu::IStateDumper *v, const char *name, const limiter_t *l);
 

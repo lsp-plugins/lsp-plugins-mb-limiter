@@ -25,7 +25,7 @@
 
 #define LSP_PLUGINS_MB_LIMITER_VERSION_MAJOR       1
 #define LSP_PLUGINS_MB_LIMITER_VERSION_MINOR       0
-#define LSP_PLUGINS_MB_LIMITER_VERSION_MICRO       0
+#define LSP_PLUGINS_MB_LIMITER_VERSION_MICRO       1
 
 #define LSP_PLUGINS_MB_LIMITER_VERSION  \
     LSP_MODULE_VERSION( \
@@ -113,10 +113,18 @@ namespace lsp
             { NULL, NULL }
         };
 
+        static const port_item_t limiter_modes[] =
+        {
+            { "Classic",        "multiband.classic"         },
+            { "Linear Phase",   "multiband.linear_phase"    },
+            { NULL, NULL }
+        };
+
         #define MBL_COMMON \
             BYPASS, \
             IN_GAIN, \
             OUT_GAIN, \
+            COMBO("mode", "Operating mode", 0.0f, limiter_modes), \
             LOG_CONTROL("lk", "Lookahead", U_MSEC, mb_limiter::LOOKAHEAD), \
             COMBO("ovs", "Oversampling", mb_limiter::OVS_DEFAULT, limiter_ovs_modes), \
             COMBO("dither", "Dithering", mb_limiter::DITHER_DEFAULT, limiter_dither_modes), \

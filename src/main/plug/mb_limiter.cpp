@@ -557,6 +557,7 @@ namespace lsp
 
                     c->sBypass.destroy();
                     c->sFFTXOver.destroy();
+                    c->sFFTScXOver.destroy();
                     c->sDither.destroy();
                     c->sOver.destroy();
                     c->sScOver.destroy();

@@ -213,13 +213,13 @@
 
 		<!-- Row 2: bottom line -->
 		<hbox vreduce="true" bg.color="bg_schema" pad.h="6">
-			<label text="labels.mode" />
+			<label text="labels.mode:" pad.r="4"/>
 			<combo id="mode" pad.r="8"/>
-			<label text="labels.sc_boost:"/>
+			<label text="labels.sc_boost:" pad.r="4"/>
 			<combo id="envb" pad.r="8"/>
-			<label text="labels.oversampling:"/>
+			<label text="labels.oversampling:" pad.r="4"/>
 			<combo id="ovs" pad.r="8" pad.v="4"/>
-			<label text="labels.dither:"/>
+			<label text="labels.dither:" pad.r="4"/>
 			<combo id="dither" pad.r="8" pad.v="4"/>
 			<button id="flt" text="labels.filters" size="22" ui:inject="Button_cyan"/>
 			<void hexpand="true" hfill="true"/>

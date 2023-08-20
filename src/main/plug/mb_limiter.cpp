@@ -557,6 +557,7 @@ namespace lsp
 
                     c->sBypass.destroy();
                     c->sFFTXOver.destroy();
+                    c->sFFTScXOver.destroy();
                     c->sDither.destroy();
                     c->sOver.destroy();
                     c->sScOver.destroy();
@@ -1447,7 +1448,8 @@ namespace lsp
                 oversample_data(count);
                 for (size_t i=0; i<nChannels; ++i)
                     compute_multiband_vca_gain(&vChannels[i], ovs_count);
-                process_multiband_stereo_link(ovs_count);
+                if (nChannels > 1)
+                    process_multiband_stereo_link(ovs_count);
                 for (size_t i=0; i<nChannels; ++i)
                     apply_multiband_vca_gain(&vChannels[i], ovs_count);
 
@@ -1847,6 +1849,7 @@ namespace lsp
         {
             v->write_object("sAnalyzer", &sAnalyzer);
             v->write("nChannels", nChannels);
+            v->write("nMode", nMode);
             v->write("bSidechain", bSidechain);
             v->write("bExtSc", bExtSc);
             v->write("bEnvUpdate", bEnvUpdate);
@@ -1866,6 +1869,8 @@ namespace lsp
                     v->begin_object(c, sizeof(channel_t));
                     {
                         v->write_object("sBypass", &c->sBypass);
+                        v->write_object("sFFTXOver", &c->sFFTXOver);
+                        v->write_object("sFFTScXOver", &c->sFFTScXOver);
                         v->write_object("sDither", &c->sDither);
                         v->write_object("sOver", &c->sOver);
                         v->write_object("sScOver", &c->sScOver);
@@ -1896,6 +1901,7 @@ namespace lsp
                                 v->write("fFreqEnd", b->fFreqEnd);
                                 v->write("fMakeup", b->fMakeup);
 
+                                v->write("vDataBuf", b->vDataBuf);
                                 v->write("vTrOut", b->vTrOut);
 
                                 v->write("pFreqEnd", b->pFreqEnd);
@@ -1972,6 +1978,7 @@ namespace lsp
             v->write("pBypass", pBypass);
             v->write("pInGain", pInGain);
             v->write("pOutGain", pOutGain);
+            v->write("pMode", pMode);
             v->write("pLookahead", pLookahead);
             v->write("pOversampling", pOversampling);
             v->write("pDithering", pDithering);

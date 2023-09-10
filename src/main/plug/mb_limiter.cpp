@@ -130,7 +130,7 @@ namespace lsp
 
         mb_limiter::~mb_limiter()
         {
-            destroy();
+            do_destroy();
         }
 
         void mb_limiter::init(plug::IWrapper *wrapper, plug::IPort **ports)
@@ -543,8 +543,12 @@ namespace lsp
 
         void mb_limiter::destroy()
         {
-            Module::destroy();
+            plug::Module::destroy();
+            do_destroy();
+        }
 
+        void mb_limiter::do_destroy()
+        {
             // Destroy processors
             sAnalyzer.destroy();
 

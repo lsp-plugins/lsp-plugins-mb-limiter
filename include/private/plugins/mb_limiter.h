@@ -220,6 +220,8 @@ namespace lsp
 
                 size_t                  decode_real_sample_rate(size_t mode);
 
+                void                    do_destroy();
+
             protected:
                 static dspu::limiter_mode_t     decode_limiter_mode(ssize_t mode);
                 static dspu::over_mode_t        decode_oversampling_mode(size_t mode);

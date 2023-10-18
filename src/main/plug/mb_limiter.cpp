@@ -1634,40 +1634,15 @@ namespace lsp
                 channel_t *c     = &vChannels[i];
 
                 // Calculate transfer function
-                if (nMode == XOVER_CLASSIC)
+                for (size_t j=0; j<nPlanSize; ++j)
                 {
-                    dsp::pcomplex_fill_ri(vTrTmp, 1.0f, 0.0f, meta::mb_limiter::FFT_MESH_POINTS);
-                    dsp::fill_zero(vTr, meta::mb_limiter::FFT_MESH_POINTS*2);
-
-                    for (size_t j=0; j<nPlanSize; ++j)
-                    {
-                        band_t *b       = c->vPlan[j];
-
-                        // Apply all-pass characteristics
-                        b->sAllFilter.freq_chart(vFc, vFreqs, meta::mb_limiter::FFT_MESH_POINTS);
-                        dsp::pcomplex_mul2(vTr, vFc, meta::mb_limiter::FFT_MESH_POINTS);
-
-                        // Apply lo-pass filter characteristics
-                        b->sPassFilter.freq_chart(vFc, vFreqs, meta::mb_limiter::FFT_MESH_POINTS);
-                        dsp::pcomplex_mul2(vFc, vTrTmp, meta::mb_limiter::FFT_MESH_POINTS);
-                        dsp::fmadd_k3(vTr, vFc, b->sLimiter.fReductionLevel * b->fMakeup, meta::mb_limiter::FFT_MESH_POINTS*2);
-
-                        // Apply hi-pass filter characteristics
-                        b->sRejFilter.freq_chart(vFc, vFreqs, meta::mb_limiter::FFT_MESH_POINTS);
-                        dsp::pcomplex_mul2(vTrTmp, vFc, meta::mb_limiter::FFT_MESH_POINTS);
-                    }
-                    dsp::pcomplex_mod(c->vTrOut, vTr, meta::mb_limiter::FFT_MESH_POINTS);
-                }
-                else
-                {
-                    dsp::fill_zero(vTr, meta::mb_limiter::FFT_MESH_POINTS);
-                    for (size_t j=0; j<nPlanSize; ++j)
-                    {
-                        band_t *b       = c->vPlan[j];
+                    band_t *b       = c->vPlan[j];
+                    if (j == 0)
+                        dsp::mul_k3(vTr, b->vTrOut, b->sLimiter.fReductionLevel * b->fMakeup, meta::mb_limiter::FFT_MESH_POINTS);
+                    else
                         dsp::fmadd_k3(vTr, b->vTrOut, b->sLimiter.fReductionLevel * b->fMakeup, meta::mb_limiter::FFT_MESH_POINTS);
-                    }
-                    dsp::copy(c->vTrOut, vTr, meta::mb_limiter::FFT_MESH_POINTS);
                 }
+                dsp::copy(c->vTrOut, vTr, meta::mb_limiter::FFT_MESH_POINTS);
 
                 // Output FFT curve for input
                 plug::mesh_t *mesh            = (c->pFftIn != NULL) ? c->pFftIn->buffer<plug::mesh_t>() : NULL;

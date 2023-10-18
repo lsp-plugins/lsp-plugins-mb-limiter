@@ -3,7 +3,7 @@
 *******************************************************************************
 
 === 1.0.4 ===
-
+* Reduced CPU consumption.
 
 === 1.0.3 ===
 * Updated build scripts and dependencies.

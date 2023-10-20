@@ -177,6 +177,8 @@ namespace lsp
             sAnalyzer.set_window(meta::mb_limiter::FFT_WINDOW);
             sAnalyzer.set_rate(meta::mb_limiter::REFRESH_RATE);
 
+            sCounter.set_frequency(meta::mb_limiter::REFRESH_RATE, true);
+
             // Allocate data
             uint8_t *ptr            = alloc_aligned<uint8_t>(pData, to_alloc);
             if (ptr == NULL)
@@ -619,6 +621,7 @@ namespace lsp
 
             // Update analyzer's sample rate
             sAnalyzer.set_sample_rate(sr);
+            sCounter.set_sample_rate(sr, true);
 
             // Update channels
             for (size_t i=0; i<nChannels; ++i)
@@ -1479,12 +1482,16 @@ namespace lsp
             }
 
             // Output FFT graphs to the UI
+            sCounter.submit(samples);
+
             output_meters();
             output_fft_curves();
 
             // Request for redraw
-            if (pWrapper != NULL)
+            if ((pWrapper != NULL) && (sCounter.fired()))
                 pWrapper->query_display_draw();
+
+            sCounter.commit();
         }
 
         void mb_limiter::oversample_data(size_t samples)
@@ -1634,15 +1641,18 @@ namespace lsp
                 channel_t *c     = &vChannels[i];
 
                 // Calculate transfer function
-                for (size_t j=0; j<nPlanSize; ++j)
+                if (sCounter.fired())
                 {
-                    band_t *b       = c->vPlan[j];
-                    if (j == 0)
-                        dsp::mul_k3(vTr, b->vTrOut, b->sLimiter.fReductionLevel * b->fMakeup, meta::mb_limiter::FFT_MESH_POINTS);
-                    else
-                        dsp::fmadd_k3(vTr, b->vTrOut, b->sLimiter.fReductionLevel * b->fMakeup, meta::mb_limiter::FFT_MESH_POINTS);
+                    for (size_t j=0; j<nPlanSize; ++j)
+                    {
+                        band_t *b       = c->vPlan[j];
+                        if (j == 0)
+                            dsp::mul_k3(vTr, b->vTrOut, b->sLimiter.fReductionLevel * b->fMakeup, meta::mb_limiter::FFT_MESH_POINTS);
+                        else
+                            dsp::fmadd_k3(vTr, b->vTrOut, b->sLimiter.fReductionLevel * b->fMakeup, meta::mb_limiter::FFT_MESH_POINTS);
+                    }
+                    dsp::copy(c->vTrOut, vTr, meta::mb_limiter::FFT_MESH_POINTS);
                 }
-                dsp::copy(c->vTrOut, vTr, meta::mb_limiter::FFT_MESH_POINTS);
 
                 // Output FFT curve for input
                 plug::mesh_t *mesh            = (c->pFftIn != NULL) ? c->pFftIn->buffer<plug::mesh_t>() : NULL;
@@ -1839,6 +1849,7 @@ namespace lsp
         void mb_limiter::dump(dspu::IStateDumper *v) const
         {
             v->write_object("sAnalyzer", &sAnalyzer);
+            v->write_object("sCounter", &sCounter);
             v->write("nChannels", nChannels);
             v->write("nMode", nMode);
             v->write("bSidechain", bSidechain);

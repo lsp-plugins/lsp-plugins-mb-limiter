@@ -23,6 +23,7 @@
 #define PRIVATE_PLUGINS_MB_LIMITER_H_
 
 #include <lsp-plug.in/dsp-units/ctl/Bypass.h>
+#include <lsp-plug.in/dsp-units/ctl/Counter.h>
 #include <lsp-plug.in/dsp-units/dynamics/Limiter.h>
 #include <lsp-plug.in/dsp-units/filters/DynamicFilters.h>
 #include <lsp-plug.in/dsp-units/filters/Equalizer.h>
@@ -45,10 +46,6 @@ namespace lsp
          */
         class mb_limiter: public plug::Module
         {
-            private:
-                mb_limiter & operator = (const mb_limiter &);
-                mb_limiter (const mb_limiter &);
-
             protected:
                 enum xover_mode_t
                 {
@@ -164,6 +161,7 @@ namespace lsp
 
             protected:
                 dspu::Analyzer          sAnalyzer;          // Analyzer
+                dspu::Counter           sCounter;           // Sync counter
                 size_t                  nChannels;          // Number of channels
                 xover_mode_t            nMode;              // Operating mode
                 bool                    bSidechain;         // Sidechain switch is present
@@ -235,7 +233,12 @@ namespace lsp
 
             public:
                 explicit mb_limiter(const meta::plugin_t *meta);
+                mb_limiter(const mb_limiter &) = delete;
+                mb_limiter(mb_limiter &&) = delete;
                 virtual ~mb_limiter() override;
+
+                mb_limiter & operator = (const mb_limiter &) = delete;
+                mb_limiter & operator = (mb_limiter &&) = delete;
 
                 virtual void            init(plug::IWrapper *wrapper, plug::IPort **ports) override;
                 virtual void            destroy() override;

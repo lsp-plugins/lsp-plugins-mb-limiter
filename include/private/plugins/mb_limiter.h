@@ -207,7 +207,7 @@ namespace lsp
                 void                    output_meters();
                 void                    output_fft_curves();
                 void                    perform_analysis(size_t samples);
-                void                    oversample_data(size_t samples);
+                void                    oversample_data(size_t samples, size_t ovs_samples);
                 void                    compute_multiband_vca_gain(channel_t *c, size_t samples);
                 void                    process_multiband_stereo_link(size_t samples);
                 void                    apply_multiband_vca_gain(channel_t *c, size_t samples);

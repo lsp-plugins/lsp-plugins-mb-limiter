@@ -32,7 +32,7 @@
 #include <private/plugins/mb_limiter.h>
 
 /* The size of temporary buffer for audio processing */
-#define BUFFER_SIZE         0x1000U
+#define BUFFER_SIZE         0x400U
 
 namespace lsp
 {
@@ -345,7 +345,7 @@ namespace lsp
                     b->pBandGraph       = NULL;
 
                     // limiter_t
-                    limiter_t *l        = &b->sLimiter;
+                    l                   = &b->sLimiter;
                     l->sLimit.construct();
 
                     // Initialize limiter with latency compensation gap
@@ -1449,10 +1449,10 @@ namespace lsp
             {
                 // Compute number of samples to process
                 size_t count        = lsp_min(samples - offset, BUFFER_SIZE);
-                size_t ovs_count    = samples * vChannels[0].sScOver.get_oversampling();
+                size_t ovs_count    = count * vChannels[0].sScOver.get_oversampling();
 
                 // Perform multiband processing
-                oversample_data(count);
+                oversample_data(count, ovs_count);
                 for (size_t i=0; i<nChannels; ++i)
                     compute_multiband_vca_gain(&vChannels[i], ovs_count);
                 if (nChannels > 1)
@@ -1478,7 +1478,7 @@ namespace lsp
                     c->vOut            += count;
                     c->vSc             += count;
                 }
-                offset += samples;
+                offset += count;
             }
 
             // Output FFT graphs to the UI
@@ -1494,11 +1494,9 @@ namespace lsp
             sCounter.commit();
         }
 
-        void mb_limiter::oversample_data(size_t samples)
+        void mb_limiter::oversample_data(size_t samples, size_t ovs_samples)
         {
             // Apply input gain if needed
-            size_t ovs_samples = samples * vChannels[0].sScOver.get_oversampling();
-
             for (size_t i=0; i<nChannels; ++i)
             {
                 channel_t *c        = &vChannels[i];

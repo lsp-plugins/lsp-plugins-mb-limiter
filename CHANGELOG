@@ -3,6 +3,7 @@
 *******************************************************************************
 
 === 1.0.4 ===
+* Fixed bug for invalid processing of large buffer sizes.
 * Reduced CPU consumption.
 * Reduced the rate of the gain curve update.
 

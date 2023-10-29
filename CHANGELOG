@@ -2,6 +2,9 @@
 * RECENT CHANGES
 *******************************************************************************
 
+=== 1.0.5 ===
+
+
 === 1.0.4 ===
 * Fixed bug for invalid processing of large buffer sizes.
 * Reduced CPU consumption.

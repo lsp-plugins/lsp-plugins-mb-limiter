@@ -32,7 +32,7 @@
 #include <private/plugins/mb_limiter.h>
 
 /* The size of temporary buffer for audio processing */
-#define BUFFER_SIZE         0x1000U
+#define BUFFER_SIZE         0x400U
 
 namespace lsp
 {
@@ -176,6 +176,8 @@ namespace lsp
             sAnalyzer.set_envelope(dspu::envelope::WHITE_NOISE);
             sAnalyzer.set_window(meta::mb_limiter::FFT_WINDOW);
             sAnalyzer.set_rate(meta::mb_limiter::REFRESH_RATE);
+
+            sCounter.set_frequency(meta::mb_limiter::REFRESH_RATE, true);
 
             // Allocate data
             uint8_t *ptr            = alloc_aligned<uint8_t>(pData, to_alloc);
@@ -343,7 +345,7 @@ namespace lsp
                     b->pBandGraph       = NULL;
 
                     // limiter_t
-                    limiter_t *l        = &b->sLimiter;
+                    l                   = &b->sLimiter;
                     l->sLimit.construct();
 
                     // Initialize limiter with latency compensation gap
@@ -619,6 +621,7 @@ namespace lsp
 
             // Update analyzer's sample rate
             sAnalyzer.set_sample_rate(sr);
+            sCounter.set_sample_rate(sr, true);
 
             // Update channels
             for (size_t i=0; i<nChannels; ++i)
@@ -1446,10 +1449,10 @@ namespace lsp
             {
                 // Compute number of samples to process
                 size_t count        = lsp_min(samples - offset, BUFFER_SIZE);
-                size_t ovs_count    = samples * vChannels[0].sScOver.get_oversampling();
+                size_t ovs_count    = count * vChannels[0].sScOver.get_oversampling();
 
                 // Perform multiband processing
-                oversample_data(count);
+                oversample_data(count, ovs_count);
                 for (size_t i=0; i<nChannels; ++i)
                     compute_multiband_vca_gain(&vChannels[i], ovs_count);
                 if (nChannels > 1)
@@ -1475,23 +1478,25 @@ namespace lsp
                     c->vOut            += count;
                     c->vSc             += count;
                 }
-                offset += samples;
+                offset += count;
             }
 
             // Output FFT graphs to the UI
+            sCounter.submit(samples);
+
             output_meters();
             output_fft_curves();
 
             // Request for redraw
-            if (pWrapper != NULL)
+            if ((pWrapper != NULL) && (sCounter.fired()))
                 pWrapper->query_display_draw();
+
+            sCounter.commit();
         }
 
-        void mb_limiter::oversample_data(size_t samples)
+        void mb_limiter::oversample_data(size_t samples, size_t ovs_samples)
         {
             // Apply input gain if needed
-            size_t ovs_samples = samples * vChannels[0].sScOver.get_oversampling();
-
             for (size_t i=0; i<nChannels; ++i)
             {
                 channel_t *c        = &vChannels[i];
@@ -1634,37 +1639,15 @@ namespace lsp
                 channel_t *c     = &vChannels[i];
 
                 // Calculate transfer function
-                if (nMode == XOVER_CLASSIC)
+                if (sCounter.fired())
                 {
-                    dsp::pcomplex_fill_ri(vTrTmp, 1.0f, 0.0f, meta::mb_limiter::FFT_MESH_POINTS);
-                    dsp::fill_zero(vTr, meta::mb_limiter::FFT_MESH_POINTS*2);
-
                     for (size_t j=0; j<nPlanSize; ++j)
                     {
                         band_t *b       = c->vPlan[j];
-
-                        // Apply all-pass characteristics
-                        b->sAllFilter.freq_chart(vFc, vFreqs, meta::mb_limiter::FFT_MESH_POINTS);
-                        dsp::pcomplex_mul2(vTr, vFc, meta::mb_limiter::FFT_MESH_POINTS);
-
-                        // Apply lo-pass filter characteristics
-                        b->sPassFilter.freq_chart(vFc, vFreqs, meta::mb_limiter::FFT_MESH_POINTS);
-                        dsp::pcomplex_mul2(vFc, vTrTmp, meta::mb_limiter::FFT_MESH_POINTS);
-                        dsp::fmadd_k3(vTr, vFc, b->sLimiter.fReductionLevel * b->fMakeup, meta::mb_limiter::FFT_MESH_POINTS*2);
-
-                        // Apply hi-pass filter characteristics
-                        b->sRejFilter.freq_chart(vFc, vFreqs, meta::mb_limiter::FFT_MESH_POINTS);
-                        dsp::pcomplex_mul2(vTrTmp, vFc, meta::mb_limiter::FFT_MESH_POINTS);
-                    }
-                    dsp::pcomplex_mod(c->vTrOut, vTr, meta::mb_limiter::FFT_MESH_POINTS);
-                }
-                else
-                {
-                    dsp::fill_zero(vTr, meta::mb_limiter::FFT_MESH_POINTS);
-                    for (size_t j=0; j<nPlanSize; ++j)
-                    {
-                        band_t *b       = c->vPlan[j];
-                        dsp::fmadd_k3(vTr, b->vTrOut, b->sLimiter.fReductionLevel * b->fMakeup, meta::mb_limiter::FFT_MESH_POINTS);
+                        if (j == 0)
+                            dsp::mul_k3(vTr, b->vTrOut, b->sLimiter.fReductionLevel * b->fMakeup, meta::mb_limiter::FFT_MESH_POINTS);
+                        else
+                            dsp::fmadd_k3(vTr, b->vTrOut, b->sLimiter.fReductionLevel * b->fMakeup, meta::mb_limiter::FFT_MESH_POINTS);
                     }
                     dsp::copy(c->vTrOut, vTr, meta::mb_limiter::FFT_MESH_POINTS);
                 }
@@ -1864,6 +1847,7 @@ namespace lsp
         void mb_limiter::dump(dspu::IStateDumper *v) const
         {
             v->write_object("sAnalyzer", &sAnalyzer);
+            v->write_object("sCounter", &sCounter);
             v->write("nChannels", nChannels);
             v->write("nMode", nMode);
             v->write("bSidechain", bSidechain);

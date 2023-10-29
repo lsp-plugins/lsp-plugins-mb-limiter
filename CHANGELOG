@@ -6,6 +6,7 @@
 * Fixed bug for invalid processing of large buffer sizes.
 * Reduced CPU consumption.
 * Reduced the rate of the gain curve update.
+* Updated build scripts and dependencies.
 
 === 1.0.3 ===
 * Updated build scripts and dependencies.

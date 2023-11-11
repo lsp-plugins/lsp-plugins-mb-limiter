@@ -27,6 +27,7 @@
 #include <lsp-plug.in/dsp-units/util/Oversampler.h>
 #include <lsp-plug.in/dsp-units/units.h>
 #include <lsp-plug.in/plug-fw/meta/func.h>
+#include <lsp-plug.in/shared/debug.h>
 #include <lsp-plug.in/shared/id_colors.h>
 
 #include <private/plugins/mb_limiter.h>
@@ -36,12 +37,6 @@
 
 namespace lsp
 {
-    static plug::IPort *TRACE_PORT(plug::IPort *p)
-    {
-        lsp_trace("  port id=%s", (p)->metadata()->id);
-        return p;
-    }
-
     namespace plugins
     {
         //---------------------------------------------------------------------
@@ -382,27 +377,27 @@ namespace lsp
             size_t port_id      = 0;
             lsp_trace("Binding audio channels");
             for (size_t i=0; i<nChannels; ++i)
-                vChannels[i].pIn    = TRACE_PORT(ports[port_id++]);
+                vChannels[i].pIn    = trace_port(ports[port_id++]);
             for (size_t i=0; i<nChannels; ++i)
-                vChannels[i].pOut   = TRACE_PORT(ports[port_id++]);
+                vChannels[i].pOut   = trace_port(ports[port_id++]);
             for (size_t i=0; i<nChannels; ++i)
-                vChannels[i].pSc    = (bSidechain) ? TRACE_PORT(ports[port_id++]) : vChannels[i].pIn;
+                vChannels[i].pSc    = (bSidechain) ? trace_port(ports[port_id++]) : vChannels[i].pIn;
 
             // Bind common ports
             lsp_trace("Binding common ports");
-            pBypass             = TRACE_PORT(ports[port_id++]);
-            pInGain             = TRACE_PORT(ports[port_id++]);
-            pOutGain            = TRACE_PORT(ports[port_id++]);
-            pMode               = TRACE_PORT(ports[port_id++]);
-            pLookahead          = TRACE_PORT(ports[port_id++]);
-            pOversampling       = TRACE_PORT(ports[port_id++]);
-            pDithering          = TRACE_PORT(ports[port_id++]);
-            pEnvBoost           = TRACE_PORT(ports[port_id++]);
-            pZoom               = TRACE_PORT(ports[port_id++]);
-            TRACE_PORT(ports[port_id++]); // Skip band filter curve control port
-            pReactivity         = TRACE_PORT(ports[port_id++]);
-            pShift              = TRACE_PORT(ports[port_id++]);
-            pExtSc              = (bSidechain) ? TRACE_PORT(ports[port_id++]) : NULL;
+            pBypass             = trace_port(ports[port_id++]);
+            pInGain             = trace_port(ports[port_id++]);
+            pOutGain            = trace_port(ports[port_id++]);
+            pMode               = trace_port(ports[port_id++]);
+            pLookahead          = trace_port(ports[port_id++]);
+            pOversampling       = trace_port(ports[port_id++]);
+            pDithering          = trace_port(ports[port_id++]);
+            pEnvBoost           = trace_port(ports[port_id++]);
+            pZoom               = trace_port(ports[port_id++]);
+            trace_port(ports[port_id++]); // Skip band filter curve control port
+            pReactivity         = trace_port(ports[port_id++]);
+            pShift              = trace_port(ports[port_id++]);
+            pExtSc              = (bSidechain) ? trace_port(ports[port_id++]) : NULL;
 
             // Bind metering ports
             lsp_trace("Binding metering ports");
@@ -410,13 +405,13 @@ namespace lsp
             {
                 channel_t *c        = &vChannels[i];
 
-                c->pFftInEnable     = TRACE_PORT(ports[port_id++]);
-                c->pFftOutEnable    = TRACE_PORT(ports[port_id++]);
-                c->pInMeter         = TRACE_PORT(ports[port_id++]);
-                c->pOutMeter        = TRACE_PORT(ports[port_id++]);
-                c->pFftIn           = TRACE_PORT(ports[port_id++]);
-                c->pFftOut          = TRACE_PORT(ports[port_id++]);
-                c->pFilterGraph     = TRACE_PORT(ports[port_id++]);
+                c->pFftInEnable     = trace_port(ports[port_id++]);
+                c->pFftOutEnable    = trace_port(ports[port_id++]);
+                c->pInMeter         = trace_port(ports[port_id++]);
+                c->pOutMeter        = trace_port(ports[port_id++]);
+                c->pFftIn           = trace_port(ports[port_id++]);
+                c->pFftOut          = trace_port(ports[port_id++]);
+                c->pFilterGraph     = trace_port(ports[port_id++]);
             }
 
             // Bind main limiter ports
@@ -447,22 +442,22 @@ namespace lsp
                 }
                 else
                 {
-                    l->pEnable          = TRACE_PORT(ports[port_id++]);
-                    l->pAlrOn           = TRACE_PORT(ports[port_id++]);
-                    l->pAlrAttack       = TRACE_PORT(ports[port_id++]);
-                    l->pAlrRelease      = TRACE_PORT(ports[port_id++]);
-                    l->pAlrKnee         = TRACE_PORT(ports[port_id++]);
+                    l->pEnable          = trace_port(ports[port_id++]);
+                    l->pAlrOn           = trace_port(ports[port_id++]);
+                    l->pAlrAttack       = trace_port(ports[port_id++]);
+                    l->pAlrRelease      = trace_port(ports[port_id++]);
+                    l->pAlrKnee         = trace_port(ports[port_id++]);
 
-                    l->pMode            = TRACE_PORT(ports[port_id++]);
-                    l->pThresh          = TRACE_PORT(ports[port_id++]);
-                    l->pBoost           = TRACE_PORT(ports[port_id++]);
-                    l->pAttack          = TRACE_PORT(ports[port_id++]);
-                    l->pRelease         = TRACE_PORT(ports[port_id++]);
-                    l->pInMeter         = TRACE_PORT(ports[port_id++]);
-                    l->pStereoLink      = (nChannels > 1) ? TRACE_PORT(ports[port_id++]) : NULL;
+                    l->pMode            = trace_port(ports[port_id++]);
+                    l->pThresh          = trace_port(ports[port_id++]);
+                    l->pBoost           = trace_port(ports[port_id++]);
+                    l->pAttack          = trace_port(ports[port_id++]);
+                    l->pRelease         = trace_port(ports[port_id++]);
+                    l->pInMeter         = trace_port(ports[port_id++]);
+                    l->pStereoLink      = (nChannels > 1) ? trace_port(ports[port_id++]) : NULL;
                 }
 
-                l->pReductionMeter  = TRACE_PORT(ports[port_id++]);
+                l->pReductionMeter  = trace_port(ports[port_id++]);
             }
 
             // Bind split ports
@@ -471,8 +466,8 @@ namespace lsp
             {
                 split_t *s          = &vSplits[i];
 
-                s->pEnabled         = TRACE_PORT(ports[port_id++]);
-                s->pFreq            = TRACE_PORT(ports[port_id++]);
+                s->pEnabled         = trace_port(ports[port_id++]);
+                s->pFreq            = trace_port(ports[port_id++]);
             }
 
             // Bind band-related ports
@@ -516,29 +511,29 @@ namespace lsp
                     {
                         limiter_t *l        = &b->sLimiter;
 
-                        b->pFreqEnd         = TRACE_PORT(ports[port_id++]);
-                        b->pSolo            = TRACE_PORT(ports[port_id++]);
-                        b->pMute            = TRACE_PORT(ports[port_id++]);
-                        b->pPreamp          = TRACE_PORT(ports[port_id++]);
-                        b->pMakeup          = TRACE_PORT(ports[port_id++]);
-                        b->pBandGraph       = TRACE_PORT(ports[port_id++]);
+                        b->pFreqEnd         = trace_port(ports[port_id++]);
+                        b->pSolo            = trace_port(ports[port_id++]);
+                        b->pMute            = trace_port(ports[port_id++]);
+                        b->pPreamp          = trace_port(ports[port_id++]);
+                        b->pMakeup          = trace_port(ports[port_id++]);
+                        b->pBandGraph       = trace_port(ports[port_id++]);
 
-                        l->pEnable          = TRACE_PORT(ports[port_id++]);
-                        l->pAlrOn           = TRACE_PORT(ports[port_id++]);
-                        l->pAlrAttack       = TRACE_PORT(ports[port_id++]);
-                        l->pAlrRelease      = TRACE_PORT(ports[port_id++]);
-                        l->pAlrKnee         = TRACE_PORT(ports[port_id++]);
+                        l->pEnable          = trace_port(ports[port_id++]);
+                        l->pAlrOn           = trace_port(ports[port_id++]);
+                        l->pAlrAttack       = trace_port(ports[port_id++]);
+                        l->pAlrRelease      = trace_port(ports[port_id++]);
+                        l->pAlrKnee         = trace_port(ports[port_id++]);
 
-                        l->pMode            = TRACE_PORT(ports[port_id++]);
-                        l->pThresh          = TRACE_PORT(ports[port_id++]);
-                        l->pBoost           = TRACE_PORT(ports[port_id++]);
-                        l->pAttack          = TRACE_PORT(ports[port_id++]);
-                        l->pRelease         = TRACE_PORT(ports[port_id++]);
-                        l->pInMeter         = TRACE_PORT(ports[port_id++]);
-                        l->pStereoLink      = (nChannels > 1) ? TRACE_PORT(ports[port_id++]) : NULL;
+                        l->pMode            = trace_port(ports[port_id++]);
+                        l->pThresh          = trace_port(ports[port_id++]);
+                        l->pBoost           = trace_port(ports[port_id++]);
+                        l->pAttack          = trace_port(ports[port_id++]);
+                        l->pRelease         = trace_port(ports[port_id++]);
+                        l->pInMeter         = trace_port(ports[port_id++]);
+                        l->pStereoLink      = (nChannels > 1) ? trace_port(ports[port_id++]) : NULL;
                     }
 
-                    b->sLimiter.pReductionMeter     = TRACE_PORT(ports[port_id++]);
+                    b->sLimiter.pReductionMeter     = trace_port(ports[port_id++]);
                 }
             }
         }
@@ -1324,15 +1319,25 @@ namespace lsp
             c->sDataDelayMB.process(vTmpBuf, c->vInBuf, samples);
 
             // Originally, there is no signal
-            dsp::fill_zero(c->vDataBuf, samples);           // Clear the channel data buffer
-
             if (nMode == XOVER_CLASSIC)
             {
-                for (size_t j=0; j<nPlanSize; ++j)
-                {
-                    band_t *b       = c->vPlan[j];
+                // Do the crossover stuff: first step
+                band_t *b       = c->vPlan[0];
 
-                    // Do the crossover stuff:
+                // Process the signal with all-pass
+                b->sAllFilter.process(c->vDataBuf, c->vDataBuf, samples);
+                // Filter frequencies from input
+                b->sPassFilter.process(vEnvBuf, vTmpBuf, samples);
+                // Apply VCA gain to band and add to output data buffer
+                dsp::mul3(c->vDataBuf, vEnvBuf, b->sLimiter.vVcaBuf, samples);
+                // Filter frequencies from input
+                b->sRejFilter.process(vTmpBuf, vTmpBuf, samples);
+
+                // Do the crossover stuff: other steps
+                for (size_t j=1; j<nPlanSize; ++j)
+                {
+                    b               = c->vPlan[j];
+
                     // Process the signal with all-pass
                     b->sAllFilter.process(c->vDataBuf, c->vDataBuf, samples);
                     // Filter frequencies from input
@@ -1346,10 +1351,15 @@ namespace lsp
             else // nMode == XOVER_LINEAR_PHASE
             {
                 c->sFFTXOver.process(vTmpBuf, samples);
-                for (size_t j=0; j<nPlanSize; ++j)
+
+                // First step
+                band_t *b       = c->vPlan[0];
+                dsp::mul3(c->vDataBuf, b->vDataBuf, b->sLimiter.vVcaBuf, samples);
+
+                // Other steps: Apply VCA gain to band and add to output data buffer
+                for (size_t j=1; j<nPlanSize; ++j)
                 {
-                    band_t *b       = c->vPlan[j];
-                    // Apply VCA gain to band and add to output data buffer
+                    b               = c->vPlan[j];
                     dsp::fmadd3(c->vDataBuf, b->vDataBuf, b->sLimiter.vVcaBuf, samples);
                 }
             }

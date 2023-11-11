@@ -1323,9 +1323,6 @@ namespace lsp
             {
                 // Do the crossover stuff: first step
                 band_t *b       = c->vPlan[0];
-
-                // Process the signal with all-pass
-                b->sAllFilter.process(c->vDataBuf, c->vDataBuf, samples);
                 // Filter frequencies from input
                 b->sPassFilter.process(vEnvBuf, vTmpBuf, samples);
                 // Apply VCA gain to band and add to output data buffer
@@ -1518,14 +1515,14 @@ namespace lsp
                 else
                     c->sOver.upsample(c->vInBuf, c->vIn, samples);
 
-                // Process sidechain signal
+                // Process sidechain signal and apply boosting
                 if ((c->vSc != NULL) && (bExtSc))
+                {
                     c->sScOver.upsample(c->vScBuf, c->vSc, samples);
+                    c->sScBoost.process(c->vScBuf, c->vScBuf, ovs_samples);
+                }
                 else
-                    dsp::copy(c->vScBuf, c->vInBuf, ovs_samples);
-
-                // Apply sidechain boosting
-                c->sScBoost.process(c->vScBuf, c->vScBuf, ovs_samples);
+                    c->sScBoost.process(c->vScBuf, c->vInBuf, ovs_samples);
             }
         }
 

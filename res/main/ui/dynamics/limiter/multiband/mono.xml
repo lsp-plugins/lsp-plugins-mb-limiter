@@ -73,9 +73,9 @@
 					<mesh id="bfc_${:i+1}" width="2" fill="true" smooth="true" color="graph_mesh_cycle" color.hue="${:i * 0.125}" fcolor="graph_mesh_cycle" fcolor.hue="${:i * 0.125}" fcolor.a="0.9" color.a="0.6" visibility=":flt and :se_${:i}"/>
 				</ui:for>
 
-				<mesh id="ifg" width="0" color="mono_in" color.a="0.8" fcolor.a="0.8" fill="true" fcolor="left_in" visibility=":ife"/>
+				<mesh id="ifg" oy=":_ui_zoomable_spectrum_graph ? 1 : 3" width="0" color="mono_in" color.a="0.8" fcolor.a="0.8" fill="true" fcolor="left_in" visibility=":ife"/>
 
-				<mesh id="ofg" width="3" color="mono" visibility=":ofe"/>
+				<mesh id="ofg" oy=":_ui_zoomable_spectrum_graph ? 1 : 3" width="2" color="mono" visibility=":ofe"/>
 
 				<mesh id="ag" width="3" color="graph_mesh" smooth="true"/>
 
@@ -83,6 +83,7 @@
 				<axis min="10" max="24000" angle="0.0" log="true" visibility="false"/>
 				<axis min="-72 db / (:zoom ** 3)" max="48 db * (:zoom ** 2)" color="graph_prim" angle="0.5" log="true"/>
 				<axis min="-1" max="1" visibility="false" angle="0.5"/>
+				<axis min="-72 db" max="48 db" color="graph_prim" angle="0.5" log="true"/>
 
 				<!-- Text -->
 				<ui:with ox="0" oy="2" y="0" halign="1" valign="1">

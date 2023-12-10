@@ -62,7 +62,7 @@
 					<marker v="10" color.hue="0" hcolor.hue="0" rborder="16" rcolor.hue="0" hrborder="16" hrcolor.hue="0"/>
 					<marker id="bfe_1" color.hue="0" hcolor.hue="0" lborder="16" lcolor.hue="0" hlborder="16" hlcolor.hue="0"/>
 					<ui:for id="i" first="1" count="7">
-						<marker id="sf_${i}" visibility=":se_${i}" editable="true" color.hue="${:i * 0.125}" hcolor.hue="${:i * 0.125}" rborder="16" rcolor.hue="${:i * 0.125}" hrborder="16" hrcolor.hue="${:i * 0.125}" pointer="hsize"/>
+						<marker id="sf_${i}" ui:id="split_marker_${i}" visibility=":se_${i}" editable="true" color.hue="${:i * 0.125}" hcolor.hue="${:i * 0.125}" rborder="16" rcolor.hue="${:i * 0.125}" hrborder="16" hrcolor.hue="${:i * 0.125}" pointer="hsize"/>
 						<marker id="bfe_${:i+1}" visibility=":se_${i}" color.hue="${:i * 0.125}" hcolor.hue="${:i * 0.125}" lborder="16" lcolor.hue="${:i * 0.125}" hlborder="16" hlcolor.hue="${:i * 0.125}"/>
 					</ui:for>
 				</ui:with>
@@ -115,6 +115,12 @@
 						<text y="${g} db" text="${g}" visibility=":zoom le -15 db"/>
 					</ui:for>
 				</ui:with>
+
+				<ui:for id="i" first="1" count="7">
+					<ui:with ox="0" oy="2" y="1" valign="-1" color="graph_marker_cycle" visibility="false" pad.h="4" font.bold="true">
+						<text ui:id="split_note_${i}" x=":sf_${i}" halign="(:sf_${i} lt 500) ? 1 : -1" text.halign="(:sf_${i} lt 500) ? -1 : 1" color.hue="${:i * 0.125}"/>
+					</ui:with>
+				</ui:for>
 			</graph>
 		</group>
 

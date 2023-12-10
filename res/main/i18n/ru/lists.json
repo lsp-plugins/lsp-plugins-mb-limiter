@@ -15,7 +15,11 @@
 	        "line_tail": "Лин хвост",
 	        "line_thin": "Лин узк",
 	        "line_wide": "Лин широк"
+		},
+		"split_id": "Полоса №{@id}",
+		"notes": {
+			"full": "{@id}\n{@frequency} Гц\n{@note}{@octave}{@cents}",
+			"unknown": "{@id}\n{@frequency} Гц"
 		}
 	}
 }
-

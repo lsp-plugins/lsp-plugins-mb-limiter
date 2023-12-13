@@ -334,6 +334,7 @@ namespace lsp
         {
             "Multi-band Begrenzer Mono",
             "Multiband Limiter Mono",
+            "MB Limiter Mono",
             "MBB1M",
             &developers::v_sadovnikov,
             "mb_limiter_mono",
@@ -358,6 +359,7 @@ namespace lsp
         {
             "Multi-band Begrenzer Stereo",
             "Multiband Limiter Stereo",
+            "MB Limiter Stereo",
             "MBB1S",
             &developers::v_sadovnikov,
             "mb_limiter_stereo",
@@ -382,6 +384,7 @@ namespace lsp
         {
             "Sidechain Multi-band Begrenzer Mono",
             "Sidechain Multiband Limiter Mono",
+            "SC MB Limiter Mono",
             "SCMBB1M",
             &developers::v_sadovnikov,
             "sc_mb_limiter_mono",
@@ -406,6 +409,7 @@ namespace lsp
         {
             "Sidechain Multi-band Begrenzer Stereo",
             "Sidechain Multiband Limiter Stereo",
+            "SC MB Limiter Stereo",
             "SCMBB1S",
             &developers::v_sadovnikov,
             "sc_mb_limiter_stereo",

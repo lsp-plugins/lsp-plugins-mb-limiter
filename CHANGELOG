@@ -4,6 +4,7 @@
 
 === 1.0.6 ===
 * Updated behaviour of split editing in UI.
+* Updated build scripts and dependencies.
 
 === 1.0.5 ===
 * Implemented automatic scale of spectrum graph switch.

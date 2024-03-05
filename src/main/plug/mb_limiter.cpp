@@ -1552,7 +1552,8 @@ namespace lsp
             }
 
             // Perform processing
-            sAnalyzer.process(bufs, samples);
+            if (sAnalyzer.activity())
+                sAnalyzer.process(bufs, samples);
         }
 
         void mb_limiter::output_meters()

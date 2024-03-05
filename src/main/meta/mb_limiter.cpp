@@ -1,6 +1,6 @@
 /*
- * Copyright (C) 2023 Linux Studio Plugins Project <https://lsp-plug.in/>
- *           (C) 2023 Vladimir Sadovnikov <sadko4u@gmail.com>
+ * Copyright (C) 2024 Linux Studio Plugins Project <https://lsp-plug.in/>
+ *           (C) 2024 Vladimir Sadovnikov <sadko4u@gmail.com>
  *
  * This file is part of lsp-plugins-mb-limiter
  * Created on: 22 июн 2023 г.
@@ -25,7 +25,7 @@
 
 #define LSP_PLUGINS_MB_LIMITER_VERSION_MAJOR       1
 #define LSP_PLUGINS_MB_LIMITER_VERSION_MINOR       0
-#define LSP_PLUGINS_MB_LIMITER_VERSION_MICRO       5
+#define LSP_PLUGINS_MB_LIMITER_VERSION_MICRO       6
 
 #define LSP_PLUGINS_MB_LIMITER_VERSION  \
     LSP_MODULE_VERSION( \
@@ -341,6 +341,8 @@ namespace lsp
             LSP_LV2_URI("mb_limiter_mono"),
             LSP_LV2UI_URI("mb_limiter_mono"),
             "mblm",
+            LSP_VST3_UID("mbb1m   mblm"),
+            LSP_VST3UI_UID("mbb1m   mblm"),
             LSP_LADSPA_MB_LIMITER_BASE + 0,
             LSP_LADSPA_URI("mb_limiter_mono"),
             LSP_CLAP_URI("mb_limiter_mono"),
@@ -366,6 +368,8 @@ namespace lsp
             LSP_LV2_URI("mb_limiter_stereo"),
             LSP_LV2UI_URI("mb_limiter_stereo"),
             "mbls",
+            LSP_VST3_UID("mbb1s   mbls"),
+            LSP_VST3UI_UID("mbb1s   mbls"),
             LSP_LADSPA_MB_LIMITER_BASE + 1,
             LSP_LADSPA_URI("mb_limiter_stereo"),
             LSP_CLAP_URI("mb_limiter_stereo"),
@@ -391,6 +395,8 @@ namespace lsp
             LSP_LV2_URI("sc_mb_limiter_mono"),
             LSP_LV2UI_URI("sc_mb_limiter_mono"),
             "mblM",
+            LSP_VST3_UID("scmbb1m mblM"),
+            LSP_VST3UI_UID("scmbb1m mblM"),
             LSP_LADSPA_MB_LIMITER_BASE + 2,
             LSP_LADSPA_URI("sc_mb_limiter_mono"),
             LSP_CLAP_URI("sc_mb_limiter_mono"),
@@ -416,6 +422,8 @@ namespace lsp
             LSP_LV2_URI("sc_mb_limiter_stereo"),
             LSP_LV2UI_URI("sc_mb_limiter_stereo"),
             "mblS",
+            LSP_VST3_UID("scmbb1s mblS"),
+            LSP_VST3UI_UID("scmbb1s mblS"),
             LSP_LADSPA_MB_LIMITER_BASE + 3,
             LSP_LADSPA_URI("sc_mb_limiter_stereo"),
             LSP_CLAP_URI("sc_mb_limiter_stereo"),

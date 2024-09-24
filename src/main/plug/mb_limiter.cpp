@@ -536,6 +536,8 @@ namespace lsp
                     BIND_PORT(b->sLimiter.pReductionMeter);
                 }
             }
+
+            dsp::fill_zero(vEmptyBuf, BUFFER_SIZE);
         }
 
         void mb_limiter::destroy()

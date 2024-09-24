@@ -120,7 +120,22 @@ namespace lsp
             { NULL, NULL }
         };
 
-        #define MBL_COMMON \
+        static const port_item_t limiter_sc_types[] =
+        {
+            { "Internal",       "sidechain.internal"        },
+            { "Link",           "sidechain.link"            },
+            { NULL, NULL }
+        };
+
+        static const port_item_t limiter_sc_types_for_sc[] =
+        {
+            { "Internal",       "sidechain.internal"        },
+            { "External",       "sidechain.external"        },
+            { "Link",           "sidechain.link"            },
+            { NULL, NULL }
+        };
+
+        #define MBL_BASE \
             BYPASS, \
             IN_GAIN, \
             OUT_GAIN, \
@@ -134,9 +149,19 @@ namespace lsp
             LOG_CONTROL("react", "FFT reactivity", U_MSEC, mb_limiter::REACT_TIME), \
             AMP_GAIN100("shift", "Shift gain", 1.0f)
 
+        #define MBL_COMMON \
+            MBL_BASE, \
+            COMBO("extsc", "Sidechain source", 0.0f, limiter_sc_types)
+
         #define MBL_SC_COMMON \
-            MBL_COMMON, \
-            SWITCH("extsc", "External sidechain", 0.0f)
+            MBL_BASE, \
+            COMBO("extsc", "Sidechain source", 0.0f, limiter_sc_types_for_sc)
+
+        #define MBL_SHM_LINK_MONO \
+            OPT_RETURN_MONO("link", "shml", "Side-chain shared memory link")
+
+        #define MBL_SHM_LINK_STEREO \
+            OPT_RETURN_STEREO("link", "shml_", "Side-chain shared memory link")
 
         #define MBL_SPLIT(id, label, enable, freq) \
             SWITCH("se" id, "Limiter band enable" label, enable), \
@@ -207,6 +232,7 @@ namespace lsp
         {
             // Input and output audio ports
             PORTS_MONO_PLUGIN,
+            MBL_SHM_LINK_MONO,
             MBL_COMMON,
             MBL_METERS_MONO,
             MBL_MAIN_LIMITER_MONO,
@@ -235,6 +261,7 @@ namespace lsp
         {
             // Input and output audio ports
             PORTS_STEREO_PLUGIN,
+            MBL_SHM_LINK_STEREO,
             MBL_COMMON,
             MBL_METERS_STEREO,
             MBL_MAIN_LIMITER_STEREO,
@@ -264,6 +291,7 @@ namespace lsp
             // Input and output audio ports
             PORTS_MONO_PLUGIN,
             PORTS_MONO_SIDECHAIN,
+            MBL_SHM_LINK_MONO,
             MBL_SC_COMMON,
             MBL_METERS_MONO,
             MBL_MAIN_LIMITER_MONO,
@@ -293,6 +321,7 @@ namespace lsp
             // Input and output audio ports
             PORTS_STEREO_PLUGIN,
             PORTS_STEREO_SIDECHAIN,
+            MBL_SHM_LINK_STEREO,
             MBL_SC_COMMON,
             MBL_METERS_STEREO,
             MBL_MAIN_LIMITER_STEREO,

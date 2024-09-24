@@ -119,9 +119,15 @@ This introduces additional latency but gives several benefits:</li>
 	</ul>
 	<li><b>Dither</b> - enables some dithering noise for the specified output amplitude quantization bitness.</li>
 	<li><b>Zoom</b> - zoom fader, allows to adjust zoom on the frequency chart.</li>
-	<?php if ($sc) {?> 
-	<li><b>External Sidechain</b> - uses the signal passed to additional sidechain inputs of the plugin as a control signal.</li>
-	<?php }?>
+	<li><b>Sidechain Source</b> - allows to set the sidechain source</li>
+	<ul>
+		<li><b>Internal</b> - the audio inputs of plugin are used as sidechain signal.</li>
+		<?php if ($sc) { ?>
+			<li><b>External</b> - additional sidechain audio inputs of plugins are used as sidechain signal.</li>
+		<?php } ?>
+		<li><b>Link</b> - the shared memory link is used to receive sidechain signal.</li>
+	</ul>
+	<li><b>Link</b> - the name of shared memory link used to receive sidechain signal</li>
 	<li><b>Zoom</b> - zoom fader, allows to adjust zoom on the frequency chart.</li>
 	<li><b>In</b> - the input signal meter.</li>
 	<li><b>Out</b> - the output signal meter.</li>

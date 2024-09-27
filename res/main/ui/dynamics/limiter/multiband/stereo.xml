@@ -219,21 +219,21 @@
 		</cell>
 
 		<!-- Row 2: bottom line -->
-		<hbox spacing="4" vreduce="true" bg.color="bg_schema" pad.l="6">
+		<hbox spacing="4" vreduce="true" bg.color="bg_schema" pad.h="4">
 			<label text="labels.mode:"/>
-			<combo id="mode" pad.r="8"/>
+			<combo id="mode" pad.r="4"/>
 			<label text="labels.sc_boost:"/>
-			<combo id="envb" pad.r="8"/>
+			<combo id="envb" pad.r="4"/>
 			<label text="labels.oversampling:"/>
-			<combo id="ovs" pad.r="8" pad.v="4"/>
+			<combo id="ovs" pad.r="4" pad.v="4"/>
 			<label text="labels.dither:"/>
-			<combo id="dither" pad.r="8" pad.v="4"/>
+			<combo id="dither" pad.r="4" pad.v="4"/>
 			<button id="flt" text="labels.filters" size="22" ui:inject="Button_cyan"/>
-			
+
 			<void hexpand="true" hfill="true"/>
-			
-			<void pad.h="2" bg.color="bg" reduce="true" />
-			<combo id="extsc" pad.l="6"/>
+
+			<vsep pad.h="2" bg.color="bg" reduce="true"/>
+			<combo id="extsc" />
 			<shmlink id="link" />
 		</hbox>
 

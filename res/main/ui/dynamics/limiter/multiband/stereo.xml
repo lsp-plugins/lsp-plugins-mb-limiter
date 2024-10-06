@@ -219,7 +219,7 @@
 		</cell>
 
 		<!-- Row 2: bottom line -->
-		<hbox spacing="4" vreduce="true" bg.color="bg_schema" pad.h="4">
+		<hbox spacing="4" vreduce="true" bg.color="bg_schema" pad.h="6">
 			<label text="labels.mode:"/>
 			<combo id="mode" pad.r="4"/>
 			<label text="labels.sc_boost:"/>
@@ -233,7 +233,7 @@
 			<void hexpand="true" hfill="true"/>
 
 			<vsep pad.h="2" bg.color="bg" reduce="true"/>
-			<combo id="extsc" />
+			<combo id="extsc" pad.l="2"/>
 			<shmlink id="link" />
 		</hbox>
 

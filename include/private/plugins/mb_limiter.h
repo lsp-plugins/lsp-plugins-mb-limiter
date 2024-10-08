@@ -1,6 +1,6 @@
 /*
- * Copyright (C) 2023 Linux Studio Plugins Project <https://lsp-plug.in/>
- *           (C) 2023 Vladimir Sadovnikov <sadko4u@gmail.com>
+ * Copyright (C) 2024 Linux Studio Plugins Project <https://lsp-plug.in/>
+ *           (C) 2024 Vladimir Sadovnikov <sadko4u@gmail.com>
  *
  * This file is part of lsp-plugins-mb-limiter
  * Created on: 22 июн 2023 г.
@@ -47,6 +47,13 @@ namespace lsp
         class mb_limiter: public plug::Module
         {
             protected:
+                enum sc_mode_t
+                {
+                    SCM_INTERNAL,
+                    SCM_EXTERNAL,
+                    SCM_LINK,
+                };
+
                 enum xover_mode_t
                 {
                     XOVER_CLASSIC,
@@ -136,6 +143,7 @@ namespace lsp
 
                     const float            *vIn;                // Input data
                     const float            *vSc;                // Sidechain data
+                    const float            *vShmIn;             // Shared memory input
                     float                  *vOut;               // Output data
                     float                  *vData;              // Intermediate buffer with processed data
                     float                  *vInBuf;             // Oversampled input data buffer
@@ -150,6 +158,7 @@ namespace lsp
                     plug::IPort            *pIn;                // Input port
                     plug::IPort            *pOut;               // Output port
                     plug::IPort            *pSc;                // Sidechain port
+                    plug::IPort            *pShmIn;             // Shared memory input port
                     plug::IPort            *pFftInEnable;       // Input FFT enable
                     plug::IPort            *pFftOutEnable;      // Output FFT enable
                     plug::IPort            *pInMeter;           // Input gain meter
@@ -162,19 +171,20 @@ namespace lsp
             protected:
                 dspu::Analyzer          sAnalyzer;          // Analyzer
                 dspu::Counter           sCounter;           // Sync counter
-                size_t                  nChannels;          // Number of channels
+                uint32_t                nChannels;          // Number of channels
                 xover_mode_t            nMode;              // Operating mode
                 bool                    bSidechain;         // Sidechain switch is present
-                bool                    bExtSc;             // External sidechain turned on
                 bool                    bEnvUpdate;         // Request for envelope update
+                uint32_t                nScMode;            // Sidechain mode
                 float                   fInGain;            // Input gain
                 float                   fOutGain;           // Output gain
                 float                   fZoom;              // Zoom
-                size_t                  nRealSampleRate;    // Real sample rate
-                size_t                  nEnvBoost;          // Envelope boosting
-                size_t                  nLookahead;         // Lookahead buffer size
+                uint32_t                nRealSampleRate;    // Real sample rate
+                uint32_t                nEnvBoost;          // Envelope boosting
+                uint32_t                nLookahead;         // Lookahead buffer size
 
                 channel_t              *vChannels;          // Channels
+                float                  *vEmptyBuf;          // Empty buffer filled with zeros
                 float                  *vTmpBuf;            // Temporary buffer
                 float                  *vEnvBuf;            // Temporary envelope buffer
                 uint32_t               *vIndexes;           // Analyzer FFT indexes
@@ -199,7 +209,7 @@ namespace lsp
                 plug::IPort            *pZoom;              // Zoom
                 plug::IPort            *pReactivity;        // Reactivity
                 plug::IPort            *pShift;             // Shift gain
-                plug::IPort            *pExtSc;             // External sidechain
+                plug::IPort            *pScMode;            // Sidechain mode
 
                 uint8_t                *pData;
 
@@ -217,6 +227,7 @@ namespace lsp
                 void                    output_audio(size_t samples);
 
                 size_t                  decode_real_sample_rate(size_t mode);
+                uint32_t                decode_sidechain_mode(uint32_t sc) const;
 
                 void                    do_destroy();
 

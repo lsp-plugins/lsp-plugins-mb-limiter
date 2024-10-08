@@ -1,6 +1,6 @@
 /*
- * Copyright (C) 2023 Linux Studio Plugins Project <https://lsp-plug.in/>
- *           (C) 2023 Vladimir Sadovnikov <sadko4u@gmail.com>
+ * Copyright (C) 2024 Linux Studio Plugins Project <https://lsp-plug.in/>
+ *           (C) 2024 Vladimir Sadovnikov <sadko4u@gmail.com>
  *
  * This file is part of lsp-plugins-mb-limiter
  * Created on: 22 июн 2023 г.
@@ -26,6 +26,7 @@
 #include <lsp-plug.in/dsp-units/misc/envelope.h>
 #include <lsp-plug.in/dsp-units/util/Oversampler.h>
 #include <lsp-plug.in/dsp-units/units.h>
+#include <lsp-plug.in/plug-fw/core/AudioBuffer.h>
 #include <lsp-plug.in/plug-fw/meta/func.h>
 #include <lsp-plug.in/shared/debug.h>
 #include <lsp-plug.in/shared/id_colors.h>
@@ -73,8 +74,8 @@ namespace lsp
                 (!strcmp(meta->uid, meta::sc_mb_limiter_stereo.uid)))
                 bSidechain      = true;
 
-            bExtSc              = false;
             bEnvUpdate          = true;
+            nScMode             = SCM_INTERNAL;
             fInGain             = GAIN_AMP_0_DB;
             fOutGain            = GAIN_AMP_0_DB;
             fZoom               = 1.0f;
@@ -83,6 +84,7 @@ namespace lsp
             nLookahead          = 0;
 
             vChannels           = NULL;
+            vEmptyBuf           = NULL;
             vTmpBuf             = NULL;
             vEnvBuf             = NULL;
             vFreqs              = NULL;
@@ -116,7 +118,7 @@ namespace lsp
             pDithering          = NULL;
             pEnvBoost           = NULL;
             pZoom               = NULL;
-            pExtSc              = NULL;
+            pScMode             = NULL;
             pReactivity         = NULL;
             pShift              = NULL;
 
@@ -141,6 +143,7 @@ namespace lsp
             size_t szof_ovs_buf     = szof_buf * meta::mb_limiter::OVERSAMPLING_MAX;
             size_t to_alloc         =
                 szof_channel * nChannels +      // vChannels
+                szof_buf +                      // vEmptyBuf
                 szof_ovs_buf +                  // vTmpBuf
                 szof_ovs_buf +                  // vEnvBuf
                 szof_fft_graph +                // vFreqs
@@ -181,22 +184,15 @@ namespace lsp
             lsp_guard_assert( const uint8_t *tail = &ptr[to_alloc]; );
 
             // Allocate objects
-            vChannels               = reinterpret_cast<channel_t *>(ptr);
-            ptr                    += szof_channel * nChannels;
-            vTmpBuf                 = reinterpret_cast<float *>(ptr);
-            ptr                    += szof_ovs_buf;
-            vEnvBuf                 = reinterpret_cast<float *>(ptr);
-            ptr                    += szof_ovs_buf;
-            vFreqs                  = reinterpret_cast<float *>(ptr);
-            ptr                    += szof_fft_graph;
-            vIndexes                = reinterpret_cast<uint32_t *>(ptr);
-            ptr                    += szof_indexes;
-            vTr                     = reinterpret_cast<float *>(ptr);
-            ptr                    += szof_fft_graph * 2;
-            vTrTmp                  = reinterpret_cast<float *>(ptr);
-            ptr                    += szof_fft_graph * 2;
-            vFc                     = reinterpret_cast<float *>(ptr);
-            ptr                    += szof_fft_graph * 2;
+            vChannels               = advance_ptr_bytes<channel_t>(ptr, szof_channel * nChannels);
+            vEmptyBuf               = advance_ptr_bytes<float>(ptr, szof_buf);
+            vTmpBuf                 = advance_ptr_bytes<float>(ptr, szof_ovs_buf);
+            vEnvBuf                 = advance_ptr_bytes<float>(ptr, szof_ovs_buf);
+            vFreqs                  = advance_ptr_bytes<float>(ptr, szof_fft_graph);
+            vIndexes                = advance_ptr_bytes<uint32_t>(ptr, szof_indexes);
+            vTr                     = advance_ptr_bytes<float>(ptr, szof_fft_graph * 2);
+            vTrTmp                  = advance_ptr_bytes<float>(ptr, szof_fft_graph * 2);
+            vFc                     = advance_ptr_bytes<float>(ptr, szof_fft_graph * 2);
 
             // Initialize objects
             float lk_latency        =
@@ -248,8 +244,7 @@ namespace lsp
                 l->fStereoLink      = 0.0f;
                 l->fInLevel         = GAIN_AMP_M_INF_DB;
                 l->fReductionLevel  = GAIN_AMP_0_DB;
-                l->vVcaBuf          = reinterpret_cast<float *>(ptr);
-                ptr                += szof_ovs_buf;
+                l->vVcaBuf          = advance_ptr_bytes<float>(ptr, szof_ovs_buf);
 
                 l->pEnable          = NULL;
                 l->pAlrOn           = NULL;
@@ -269,17 +264,13 @@ namespace lsp
                 // Initialize fields
                 c->vIn              = NULL;
                 c->vSc              = NULL;
+                c->vShmIn           = NULL;
                 c->vOut             = NULL;
-                c->vData            = reinterpret_cast<float *>(ptr);
-                ptr                += szof_buf;
-                c->vInBuf           = reinterpret_cast<float *>(ptr);
-                ptr                += szof_ovs_buf;
-                c->vScBuf           = reinterpret_cast<float *>(ptr);
-                ptr                += szof_ovs_buf;
-                c->vDataBuf         = reinterpret_cast<float *>(ptr);
-                ptr                += szof_ovs_buf;
-                c->vTrOut           = reinterpret_cast<float *>(ptr);
-                ptr                += szof_fft_graph;
+                c->vData            = advance_ptr_bytes<float>(ptr, szof_buf);
+                c->vInBuf           = advance_ptr_bytes<float>(ptr, szof_ovs_buf);
+                c->vScBuf           = advance_ptr_bytes<float>(ptr, szof_ovs_buf);
+                c->vDataBuf         = advance_ptr_bytes<float>(ptr, szof_ovs_buf);
+                c->vTrOut           = advance_ptr_bytes<float>(ptr, szof_fft_graph);
                 c->nAnInChannel     = an_id++;
                 c->nAnOutChannel    = an_id++;
 
@@ -289,6 +280,7 @@ namespace lsp
                 c->pIn              = NULL;
                 c->pOut             = NULL;
                 c->pSc              = NULL;
+                c->pShmIn           = NULL;
                 c->pFftInEnable     = NULL;
                 c->pFftOutEnable    = NULL;
                 c->pInMeter         = NULL;
@@ -327,10 +319,8 @@ namespace lsp
                     b->fFreqEnd         = 0.0f;
                     b->fMakeup          = GAIN_AMP_0_DB;
 
-                    b->vDataBuf         = reinterpret_cast<float *>(ptr);
-                    ptr                += szof_ovs_buf;
-                    b->vTrOut           = reinterpret_cast<float *>(ptr);
-                    ptr                += szof_fft_graph;
+                    b->vDataBuf         = advance_ptr_bytes<float>(ptr, szof_ovs_buf);
+                    b->vTrOut           = advance_ptr_bytes<float>(ptr, szof_fft_graph);
 
                     b->pFreqEnd         = NULL;
                     b->pSolo            = NULL;
@@ -351,8 +341,7 @@ namespace lsp
                     l->fStereoLink      = 0.0f;
                     l->fInLevel         = GAIN_AMP_M_INF_DB;
                     l->fReductionLevel  = GAIN_AMP_0_DB;
-                    l->vVcaBuf          = reinterpret_cast<float *>(ptr);
-                    ptr                += szof_ovs_buf;
+                    l->vVcaBuf          = advance_ptr_bytes<float>(ptr, szof_ovs_buf);
 
                     l->pEnable          = NULL;
                     l->pAlrOn           = NULL;
@@ -377,27 +366,36 @@ namespace lsp
             size_t port_id      = 0;
             lsp_trace("Binding audio channels");
             for (size_t i=0; i<nChannels; ++i)
-                vChannels[i].pIn    = trace_port(ports[port_id++]);
+                BIND_PORT(vChannels[i].pIn);
             for (size_t i=0; i<nChannels; ++i)
-                vChannels[i].pOut   = trace_port(ports[port_id++]);
+                BIND_PORT(vChannels[i].pOut);
+            if (bSidechain)
+            {
+                for (size_t i=0; i<nChannels; ++i)
+                    BIND_PORT(vChannels[i].pSc);
+            }
+
+            // Shared memory link
+            lsp_trace("Binding shared memory link");
+            SKIP_PORT("Shared memory link name");
             for (size_t i=0; i<nChannels; ++i)
-                vChannels[i].pSc    = (bSidechain) ? trace_port(ports[port_id++]) : vChannels[i].pIn;
+                BIND_PORT(vChannels[i].pShmIn);
 
             // Bind common ports
             lsp_trace("Binding common ports");
-            pBypass             = trace_port(ports[port_id++]);
-            pInGain             = trace_port(ports[port_id++]);
-            pOutGain            = trace_port(ports[port_id++]);
-            pMode               = trace_port(ports[port_id++]);
-            pLookahead          = trace_port(ports[port_id++]);
-            pOversampling       = trace_port(ports[port_id++]);
-            pDithering          = trace_port(ports[port_id++]);
-            pEnvBoost           = trace_port(ports[port_id++]);
-            pZoom               = trace_port(ports[port_id++]);
-            trace_port(ports[port_id++]); // Skip band filter curve control port
-            pReactivity         = trace_port(ports[port_id++]);
-            pShift              = trace_port(ports[port_id++]);
-            pExtSc              = (bSidechain) ? trace_port(ports[port_id++]) : NULL;
+            BIND_PORT(pBypass);
+            BIND_PORT(pInGain);
+            BIND_PORT(pOutGain);
+            BIND_PORT(pMode);
+            BIND_PORT(pLookahead);
+            BIND_PORT(pOversampling);
+            BIND_PORT(pDithering);
+            BIND_PORT(pEnvBoost);
+            BIND_PORT(pZoom);
+            SKIP_PORT("Band filter curve control port");
+            BIND_PORT(pReactivity);
+            BIND_PORT(pShift);
+            BIND_PORT(pScMode);
 
             // Bind metering ports
             lsp_trace("Binding metering ports");
@@ -405,13 +403,13 @@ namespace lsp
             {
                 channel_t *c        = &vChannels[i];
 
-                c->pFftInEnable     = trace_port(ports[port_id++]);
-                c->pFftOutEnable    = trace_port(ports[port_id++]);
-                c->pInMeter         = trace_port(ports[port_id++]);
-                c->pOutMeter        = trace_port(ports[port_id++]);
-                c->pFftIn           = trace_port(ports[port_id++]);
-                c->pFftOut          = trace_port(ports[port_id++]);
-                c->pFilterGraph     = trace_port(ports[port_id++]);
+                BIND_PORT(c->pFftInEnable);
+                BIND_PORT(c->pFftOutEnable);
+                BIND_PORT(c->pInMeter);
+                BIND_PORT(c->pOutMeter);
+                BIND_PORT(c->pFftIn);
+                BIND_PORT(c->pFftOut);
+                BIND_PORT(c->pFilterGraph);
             }
 
             // Bind main limiter ports
@@ -442,22 +440,23 @@ namespace lsp
                 }
                 else
                 {
-                    l->pEnable          = trace_port(ports[port_id++]);
-                    l->pAlrOn           = trace_port(ports[port_id++]);
-                    l->pAlrAttack       = trace_port(ports[port_id++]);
-                    l->pAlrRelease      = trace_port(ports[port_id++]);
-                    l->pAlrKnee         = trace_port(ports[port_id++]);
+                    BIND_PORT(l->pEnable);
+                    BIND_PORT(l->pAlrOn);
+                    BIND_PORT(l->pAlrAttack);
+                    BIND_PORT(l->pAlrRelease);
+                    BIND_PORT(l->pAlrKnee);
 
-                    l->pMode            = trace_port(ports[port_id++]);
-                    l->pThresh          = trace_port(ports[port_id++]);
-                    l->pBoost           = trace_port(ports[port_id++]);
-                    l->pAttack          = trace_port(ports[port_id++]);
-                    l->pRelease         = trace_port(ports[port_id++]);
-                    l->pInMeter         = trace_port(ports[port_id++]);
-                    l->pStereoLink      = (nChannels > 1) ? trace_port(ports[port_id++]) : NULL;
+                    BIND_PORT(l->pMode);
+                    BIND_PORT(l->pThresh);
+                    BIND_PORT(l->pBoost);
+                    BIND_PORT(l->pAttack);
+                    BIND_PORT(l->pRelease);
+                    BIND_PORT(l->pInMeter);
+                    if (nChannels > 1)
+                        BIND_PORT(l->pStereoLink);
                 }
 
-                l->pReductionMeter  = trace_port(ports[port_id++]);
+                BIND_PORT(l->pReductionMeter);
             }
 
             // Bind split ports
@@ -466,8 +465,8 @@ namespace lsp
             {
                 split_t *s          = &vSplits[i];
 
-                s->pEnabled         = trace_port(ports[port_id++]);
-                s->pFreq            = trace_port(ports[port_id++]);
+                BIND_PORT(s->pEnabled);
+                BIND_PORT(s->pFreq);
             }
 
             // Bind band-related ports
@@ -511,31 +510,34 @@ namespace lsp
                     {
                         limiter_t *l        = &b->sLimiter;
 
-                        b->pFreqEnd         = trace_port(ports[port_id++]);
-                        b->pSolo            = trace_port(ports[port_id++]);
-                        b->pMute            = trace_port(ports[port_id++]);
-                        b->pPreamp          = trace_port(ports[port_id++]);
-                        b->pMakeup          = trace_port(ports[port_id++]);
-                        b->pBandGraph       = trace_port(ports[port_id++]);
+                        BIND_PORT(b->pFreqEnd);
+                        BIND_PORT(b->pSolo);
+                        BIND_PORT(b->pMute);
+                        BIND_PORT(b->pPreamp);
+                        BIND_PORT(b->pMakeup);
+                        BIND_PORT(b->pBandGraph);
 
-                        l->pEnable          = trace_port(ports[port_id++]);
-                        l->pAlrOn           = trace_port(ports[port_id++]);
-                        l->pAlrAttack       = trace_port(ports[port_id++]);
-                        l->pAlrRelease      = trace_port(ports[port_id++]);
-                        l->pAlrKnee         = trace_port(ports[port_id++]);
+                        BIND_PORT(l->pEnable);
+                        BIND_PORT(l->pAlrOn);
+                        BIND_PORT(l->pAlrAttack);
+                        BIND_PORT(l->pAlrRelease);
+                        BIND_PORT(l->pAlrKnee);
 
-                        l->pMode            = trace_port(ports[port_id++]);
-                        l->pThresh          = trace_port(ports[port_id++]);
-                        l->pBoost           = trace_port(ports[port_id++]);
-                        l->pAttack          = trace_port(ports[port_id++]);
-                        l->pRelease         = trace_port(ports[port_id++]);
-                        l->pInMeter         = trace_port(ports[port_id++]);
-                        l->pStereoLink      = (nChannels > 1) ? trace_port(ports[port_id++]) : NULL;
+                        BIND_PORT(l->pMode);
+                        BIND_PORT(l->pThresh);
+                        BIND_PORT(l->pBoost);
+                        BIND_PORT(l->pAttack);
+                        BIND_PORT(l->pRelease);
+                        BIND_PORT(l->pInMeter);
+                        if (nChannels > 1)
+                            BIND_PORT(l->pStereoLink);
                     }
 
-                    b->sLimiter.pReductionMeter     = trace_port(ports[port_id++]);
+                    BIND_PORT(b->sLimiter.pReductionMeter);
                 }
             }
+
+            dsp::fill_zero(vEmptyBuf, BUFFER_SIZE);
         }
 
         void mb_limiter::destroy()
@@ -791,6 +793,31 @@ namespace lsp
             return 0;
         }
 
+        uint32_t mb_limiter::decode_sidechain_mode(uint32_t sc) const
+        {
+            if (bSidechain)
+            {
+                switch (sc)
+                {
+                    case 0: return SCM_INTERNAL;
+                    case 1: return SCM_EXTERNAL;
+                    case 2: return SCM_LINK;
+                    default: break;
+                }
+            }
+            else
+            {
+                switch (sc)
+                {
+                    case 0: return SCM_INTERNAL;
+                    case 1: return SCM_LINK;
+                    default: break;
+                }
+            }
+
+            return SCM_INTERNAL;
+        }
+
         void mb_limiter::update_settings()
         {
             dspu::filter_params_t fp;
@@ -834,7 +861,7 @@ namespace lsp
             }
 
             // Store gain
-            bExtSc              = (pExtSc != NULL) ? (pExtSc->value() >= 0.5f) : false;
+            nScMode             = decode_sidechain_mode(pScMode->value());
             fInGain             = pInGain->value();
             fOutGain            = pOutGain->value();
             fZoom               = pZoom->value();
@@ -1438,7 +1465,8 @@ namespace lsp
 
                 c->vIn              = c->pIn->buffer<float>();
                 c->vOut             = c->pOut->buffer<float>();
-                c->vSc              = (c->pSc != NULL) ? c->pSc->buffer<float>() : c->vIn;
+                c->vSc              = (c->pSc != NULL) ? c->pSc->buffer<float>() : NULL;
+                c->vShmIn           = NULL;
 
                 c->sLimiter.fInLevel        = GAIN_AMP_M_INF_DB;
                 c->sLimiter.fReductionLevel = GAIN_AMP_P_96_DB;
@@ -1449,6 +1477,10 @@ namespace lsp
                     b->sLimiter.fInLevel        = GAIN_AMP_M_INF_DB;
                     b->sLimiter.fReductionLevel = GAIN_AMP_P_96_DB;
                 }
+
+                core::AudioBuffer *shm_buf  = (c->pShmIn != NULL) ? c->pShmIn->buffer<core::AudioBuffer>() : NULL;
+                if ((shm_buf != NULL) && (shm_buf->active()))
+                    c->vShmIn           = shm_buf->buffer();
             }
 
             // Do main processing
@@ -1483,7 +1515,10 @@ namespace lsp
                     channel_t *c        = &vChannels[i];
                     c->vIn             += count;
                     c->vOut            += count;
-                    c->vSc             += count;
+                    if (c->vSc != NULL)
+                        c->vSc             += count;
+                    if (c->vShmIn != NULL)
+                        c->vShmIn          += count;
                 }
                 offset += count;
             }
@@ -1516,13 +1551,26 @@ namespace lsp
                     c->sOver.upsample(c->vInBuf, c->vIn, samples);
 
                 // Process sidechain signal and apply boosting
-                if ((c->vSc != NULL) && (bExtSc))
+                switch (nScMode)
                 {
-                    c->sScOver.upsample(c->vScBuf, c->vSc, samples);
-                    c->sScBoost.process(c->vScBuf, c->vScBuf, ovs_samples);
+                    case SCM_EXTERNAL:
+                    {
+                        const float *buf = (c->vSc != NULL) ? c->vSc : vEmptyBuf;
+                        c->sScOver.upsample(c->vScBuf, buf, samples);
+                        c->sScBoost.process(c->vScBuf, c->vScBuf, ovs_samples);
+                        break;
+                    }
+                    case SCM_LINK:
+                    {
+                        const float *buf = (c->vShmIn != NULL) ? c->vShmIn : vEmptyBuf;
+                        c->sScOver.upsample(c->vScBuf, buf, samples);
+                        c->sScBoost.process(c->vScBuf, c->vScBuf, ovs_samples);
+                        break;
+                    }
+                    default:
+                        c->sScBoost.process(c->vScBuf, c->vInBuf, ovs_samples);
+                        break;
                 }
-                else
-                    c->sScBoost.process(c->vScBuf, c->vInBuf, ovs_samples);
             }
         }
 
@@ -1859,8 +1907,8 @@ namespace lsp
             v->write("nChannels", nChannels);
             v->write("nMode", nMode);
             v->write("bSidechain", bSidechain);
-            v->write("bExtSc", bExtSc);
             v->write("bEnvUpdate", bEnvUpdate);
+            v->write("nScMode", nScMode);
             v->write("fInGain", fInGain);
             v->write("fOutGain", fOutGain);
             v->write("fZoom", fZoom);
@@ -1927,6 +1975,7 @@ namespace lsp
 
                         v->write("vIn", c->vIn);
                         v->write("vSc", c->vSc);
+                        v->write("vShmIn", c->vShmIn);
                         v->write("vOut", c->vOut);
                         v->write("vData", c->vData);
                         v->write("vInBuf", c->vInBuf);
@@ -1941,6 +1990,7 @@ namespace lsp
                         v->write("pIn", c->pIn);
                         v->write("pOut", c->pOut);
                         v->write("pSc", c->pSc);
+                        v->write("pShmIn", c->pShmIn);
                         v->write("pFftInEnable", c->pFftInEnable);
                         v->write("pFftOutEnable", c->pFftOutEnable);
                         v->write("pInMeter", c->pInMeter);
@@ -1954,6 +2004,7 @@ namespace lsp
             }
             v->end_array();
 
+            v->write("vEmptyBuf", vEmptyBuf);
             v->write("vTmpBuf", vTmpBuf);
             v->write("vEnvBuf", vEnvBuf);
             v->write("vIndexes", vIndexes);
@@ -1994,7 +2045,7 @@ namespace lsp
             v->write("pZoom", pZoom);
             v->write("pReactivity", pReactivity);
             v->write("pShift", pShift);
-            v->write("pExtSc", pExtSc);
+            v->write("pScMode", pScMode);
 
             v->write("pData", pData);
         }

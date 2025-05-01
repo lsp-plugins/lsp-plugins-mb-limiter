@@ -140,13 +140,13 @@ namespace lsp
             IN_GAIN, \
             OUT_GAIN, \
             COMBO("mode", "Operating mode", 0.0f, limiter_modes), \
-            LOG_CONTROL("lk", "Lookahead", U_MSEC, mb_limiter::LOOKAHEAD), \
+            LOG_CONTROL("lk", "Lookahead", "Lookahead", U_MSEC, mb_limiter::LOOKAHEAD), \
             COMBO("ovs", "Oversampling", mb_limiter::OVS_DEFAULT, limiter_ovs_modes), \
             COMBO("dither", "Dithering", mb_limiter::DITHER_DEFAULT, limiter_dither_modes), \
             COMBO("envb", "Envelope boost", mb_limiter::FB_DEFAULT, limiter_sc_boost), \
-            LOG_CONTROL("zoom", "Graph zoom", U_GAIN_AMP, mb_limiter::ZOOM), \
+            LOG_CONTROL("zoom", "Graph zoom", "Zoom", U_GAIN_AMP, mb_limiter::ZOOM), \
             SWITCH("flt", "Band filter curves", 1.0f), \
-            LOG_CONTROL("react", "FFT reactivity", U_MSEC, mb_limiter::REACT_TIME), \
+            LOG_CONTROL("react", "FFT reactivity", "Reactivity", U_MSEC, mb_limiter::REACT_TIME), \
             AMP_GAIN100("shift", "Shift gain", 1.0f)
 
         #define MBL_COMMON \
@@ -167,48 +167,48 @@ namespace lsp
             SWITCH("se" id, "Limiter band enable" label, enable), \
             LOG_CONTROL_DFL("sf" id, "Band split frequency" label, "Split" label, U_HZ, mb_limiter::FREQ, freq)
 
-        #define MBL_LIMITER(id, label, alr) \
+        #define MBL_LIMITER(id, label, alias, alr) \
             SWITCH("on" id, "Limiter enabled" label, 1.0f), \
             SWITCH("alr" id, "Automatic level regulation" label, alr), \
-            LOG_CONTROL("aat" id, "Automatic level regulation attack time" label, U_MSEC, mb_limiter::ALR_ATTACK_TIME), \
-            LOG_CONTROL("art" id, "Automatic level regulation release time" label, U_MSEC, mb_limiter::ALR_RELEASE_TIME), \
-            LOG_CONTROL("akn" id, "Automatic level regulation knee" label, U_GAIN_AMP, mb_limiter::KNEE), \
+            LOG_CONTROL("aat" id, "Automatic level regulation attack time" label, "ALR att time" alias, U_MSEC, mb_limiter::ALR_ATTACK_TIME), \
+            LOG_CONTROL("art" id, "Automatic level regulation release time" label, "ALR rel time" alias, U_MSEC, mb_limiter::ALR_RELEASE_TIME), \
+            LOG_CONTROL("akn" id, "Automatic level regulation knee" label, "ALR knee" alias, U_GAIN_AMP, mb_limiter::KNEE), \
             COMBO("lm" id, "Operating mode" label, mb_limiter::LOM_DEFAULT, limiter_oper_modes), \
-            LOG_CONTROL("th" id, "Threshold" label, U_GAIN_AMP, mb_limiter::THRESHOLD), \
+            LOG_CONTROL("th" id, "Threshold" label, "Threshold" alias, U_GAIN_AMP, mb_limiter::THRESHOLD), \
             SWITCH("gb" id, "Gain boost" label, 1.0f), \
-            LOG_CONTROL("at" id, "Attack time" label, U_MSEC, mb_limiter::ATTACK_TIME), \
-            LOG_CONTROL("rt" id, "Release time" label, U_MSEC, mb_limiter::RELEASE_TIME), \
+            LOG_CONTROL("at" id, "Attack time" label, "Att time" alias, U_MSEC, mb_limiter::ATTACK_TIME), \
+            LOG_CONTROL("rt" id, "Release time" label, "Rel time" alias, U_MSEC, mb_limiter::RELEASE_TIME), \
             METER_OUT_GAIN("ig" id, "Input gain meter" label, mb_limiter::THRESHOLD_MAX)
 
         #define MBL_LIMITER_METERS(id, label) \
             METER_OUT_GAIN("rlm" id, "Reduction level meter" label, GAIN_AMP_0_DB)
 
         #define MBL_MAIN_LIMITER_MONO \
-            MBL_LIMITER("", " Main", 0.0f), \
+            MBL_LIMITER("", " Main", "", 0.0f), \
             MBL_LIMITER_METERS("", " Main")
 
         #define MBL_MAIN_LIMITER_STEREO \
-            MBL_LIMITER("", " Main", 0.0f), \
-            LOG_CONTROL("slink", "Stereo linking Main", U_PERCENT, mb_limiter::LINKING), \
+            MBL_LIMITER("", " Main", "", 0.0f), \
+            LOG_CONTROL("slink", "Stereo linking Main", "Stereo link", U_PERCENT, mb_limiter::LINKING), \
             MBL_LIMITER_METERS("_l", " Main Left"), \
             MBL_LIMITER_METERS("_r", " Main Right")
 
-        #define MBL_BAND_COMMON(id, label) \
+        #define MBL_BAND_COMMON(id, label, alias) \
             METER("bfe" id, "Frequency range end" label, U_HZ, mb_limiter::OUT_FREQ), \
             SWITCH("bs" id, "Solo band" label, 0.0f), \
             SWITCH("bm" id, "Mute band" label, 0.0f), \
             AMP_GAIN100("bpa" id, "Band preamp" label, GAIN_AMP_0_DB), \
-            LOG_CONTROL("bmk" id, "Band makeup" label, U_GAIN_AMP, mb_limiter::MAKEUP), \
+            LOG_CONTROL("bmk" id, "Band makeup" label, "Makeup" label, U_GAIN_AMP, mb_limiter::MAKEUP), \
             MESH("bfc" id, "Band filter chart" label, 2, mb_limiter::FFT_MESH_POINTS + 2), \
-            MBL_LIMITER(id, label, 1.0f)
+            MBL_LIMITER(id, label, alias, 1.0f)
 
-        #define MBL_BAND_MONO(id, label) \
-            MBL_BAND_COMMON(id, label), \
+        #define MBL_BAND_MONO(id, label, alias) \
+            MBL_BAND_COMMON(id, label, alias), \
             MBL_LIMITER_METERS(id, label)
 
-        #define MBL_BAND_STEREO(id, label) \
-            MBL_BAND_COMMON(id, label), \
-            LOG_CONTROL("bsl" id, "Band stereo linking" label, U_PERCENT, mb_limiter::LINKING), \
+        #define MBL_BAND_STEREO(id, label, alias) \
+            MBL_BAND_COMMON(id, label, alias), \
+            LOG_CONTROL("bsl" id, "Band stereo linking" label, "Stereo link" label, U_PERCENT, mb_limiter::LINKING), \
             MBL_LIMITER_METERS(id "l", label " Left"), \
             MBL_LIMITER_METERS(id "r", label " Right")
 
@@ -245,14 +245,14 @@ namespace lsp
             MBL_SPLIT("_6", " 6", 1.0f, 3984.0f),
             MBL_SPLIT("_7", " 7", 0.0f, 10000.0f),
 
-            MBL_BAND_MONO("_1", " 1"),
-            MBL_BAND_MONO("_2", " 2"),
-            MBL_BAND_MONO("_3", " 3"),
-            MBL_BAND_MONO("_4", " 4"),
-            MBL_BAND_MONO("_5", " 5"),
-            MBL_BAND_MONO("_6", " 6"),
-            MBL_BAND_MONO("_7", " 7"),
-            MBL_BAND_MONO("_8", " 8"),
+            MBL_BAND_MONO("_1", " 1", " 1"),
+            MBL_BAND_MONO("_2", " 2", " 2"),
+            MBL_BAND_MONO("_3", " 3", " 3"),
+            MBL_BAND_MONO("_4", " 4", " 4"),
+            MBL_BAND_MONO("_5", " 5", " 5"),
+            MBL_BAND_MONO("_6", " 6", " 6"),
+            MBL_BAND_MONO("_7", " 7", " 7"),
+            MBL_BAND_MONO("_8", " 8", " 8"),
 
             PORTS_END
         };
@@ -274,14 +274,14 @@ namespace lsp
             MBL_SPLIT("_6", " 6", 1.0f, 3984.0f),
             MBL_SPLIT("_7", " 7", 0.0f, 10000.0f),
 
-            MBL_BAND_STEREO("_1", " 1"),
-            MBL_BAND_STEREO("_2", " 2"),
-            MBL_BAND_STEREO("_3", " 3"),
-            MBL_BAND_STEREO("_4", " 4"),
-            MBL_BAND_STEREO("_5", " 5"),
-            MBL_BAND_STEREO("_6", " 6"),
-            MBL_BAND_STEREO("_7", " 7"),
-            MBL_BAND_STEREO("_8", " 8"),
+            MBL_BAND_STEREO("_1", " 1", " 1"),
+            MBL_BAND_STEREO("_2", " 2", " 2"),
+            MBL_BAND_STEREO("_3", " 3", " 3"),
+            MBL_BAND_STEREO("_4", " 4", " 4"),
+            MBL_BAND_STEREO("_5", " 5", " 5"),
+            MBL_BAND_STEREO("_6", " 6", " 6"),
+            MBL_BAND_STEREO("_7", " 7", " 7"),
+            MBL_BAND_STEREO("_8", " 8", " 8"),
 
             PORTS_END
         };
@@ -304,14 +304,14 @@ namespace lsp
             MBL_SPLIT("_6", " 6", 1.0f, 3984.0f),
             MBL_SPLIT("_7", " 7", 0.0f, 10000.0f),
 
-            MBL_BAND_MONO("_1", " 1"),
-            MBL_BAND_MONO("_2", " 2"),
-            MBL_BAND_MONO("_3", " 3"),
-            MBL_BAND_MONO("_4", " 4"),
-            MBL_BAND_MONO("_5", " 5"),
-            MBL_BAND_MONO("_6", " 6"),
-            MBL_BAND_MONO("_7", " 7"),
-            MBL_BAND_MONO("_8", " 8"),
+            MBL_BAND_MONO("_1", " 1", " 1"),
+            MBL_BAND_MONO("_2", " 2", " 2"),
+            MBL_BAND_MONO("_3", " 3", " 3"),
+            MBL_BAND_MONO("_4", " 4", " 4"),
+            MBL_BAND_MONO("_5", " 5", " 5"),
+            MBL_BAND_MONO("_6", " 6", " 6"),
+            MBL_BAND_MONO("_7", " 7", " 7"),
+            MBL_BAND_MONO("_8", " 8", " 8"),
 
             PORTS_END
         };
@@ -334,14 +334,14 @@ namespace lsp
             MBL_SPLIT("_6", " 6", 1.0f, 3984.0f),
             MBL_SPLIT("_7", " 7", 0.0f, 10000.0f),
 
-            MBL_BAND_STEREO("_1", " 1"),
-            MBL_BAND_STEREO("_2", " 2"),
-            MBL_BAND_STEREO("_3", " 3"),
-            MBL_BAND_STEREO("_4", " 4"),
-            MBL_BAND_STEREO("_5", " 5"),
-            MBL_BAND_STEREO("_6", " 6"),
-            MBL_BAND_STEREO("_7", " 7"),
-            MBL_BAND_STEREO("_8", " 8"),
+            MBL_BAND_STEREO("_1", " 1", " 1"),
+            MBL_BAND_STEREO("_2", " 2", " 2"),
+            MBL_BAND_STEREO("_3", " 3", " 3"),
+            MBL_BAND_STEREO("_4", " 4", " 4"),
+            MBL_BAND_STEREO("_5", " 5", " 5"),
+            MBL_BAND_STEREO("_6", " 6", " 6"),
+            MBL_BAND_STEREO("_7", " 7", " 7"),
+            MBL_BAND_STEREO("_8", " 8", " 8"),
 
             PORTS_END
         };

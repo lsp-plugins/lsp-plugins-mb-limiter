@@ -1,6 +1,6 @@
 /*
- * Copyright (C) 2024 Linux Studio Plugins Project <https://lsp-plug.in/>
- *           (C) 2024 Vladimir Sadovnikov <sadko4u@gmail.com>
+ * Copyright (C) 2025 Linux Studio Plugins Project <https://lsp-plug.in/>
+ *           (C) 2025 Vladimir Sadovnikov <sadko4u@gmail.com>
  *
  * This file is part of lsp-plugins-mb-limiter
  * Created on: 22 июн 2023 г.
@@ -165,7 +165,7 @@ namespace lsp
 
         #define MBL_SPLIT(id, label, enable, freq) \
             SWITCH("se" id, "Limiter band enable" label, enable), \
-            LOG_CONTROL_DFL("sf" id, "Band split frequency" label, U_HZ, mb_limiter::FREQ, freq)
+            LOG_CONTROL_DFL("sf" id, "Band split frequency" label, "Split" label, U_HZ, mb_limiter::FREQ, freq)
 
         #define MBL_LIMITER(id, label, alr) \
             SWITCH("on" id, "Limiter enabled" label, 1.0f), \

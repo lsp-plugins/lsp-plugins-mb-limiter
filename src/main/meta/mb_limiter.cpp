@@ -139,23 +139,23 @@ namespace lsp
             BYPASS, \
             IN_GAIN, \
             OUT_GAIN, \
-            COMBO("mode", "Operating mode", 0.0f, limiter_modes), \
+            COMBO("mode", "Operating mode", "Mode", 0.0f, limiter_modes), \
             LOG_CONTROL("lk", "Lookahead", "Lookahead", U_MSEC, mb_limiter::LOOKAHEAD), \
-            COMBO("ovs", "Oversampling", mb_limiter::OVS_DEFAULT, limiter_ovs_modes), \
-            COMBO("dither", "Dithering", mb_limiter::DITHER_DEFAULT, limiter_dither_modes), \
-            COMBO("envb", "Envelope boost", mb_limiter::FB_DEFAULT, limiter_sc_boost), \
+            COMBO("ovs", "Oversampling", "Oversampling", mb_limiter::OVS_DEFAULT, limiter_ovs_modes), \
+            COMBO("dither", "Dithering", "Dithering", mb_limiter::DITHER_DEFAULT, limiter_dither_modes), \
+            COMBO("envb", "Envelope boost", "Env boost", mb_limiter::FB_DEFAULT, limiter_sc_boost), \
             LOG_CONTROL("zoom", "Graph zoom", "Zoom", U_GAIN_AMP, mb_limiter::ZOOM), \
-            SWITCH("flt", "Band filter curves", 1.0f), \
+            SWITCH("flt", "Band filter curves", "Show filters", 1.0f), \
             LOG_CONTROL("react", "FFT reactivity", "Reactivity", U_MSEC, mb_limiter::REACT_TIME), \
             AMP_GAIN100("shift", "Shift gain", 1.0f)
 
         #define MBL_COMMON \
             MBL_BASE, \
-            COMBO("extsc", "Sidechain source", 0.0f, limiter_sc_types)
+            COMBO("extsc", "Sidechain source", "SC source", 0.0f, limiter_sc_types)
 
         #define MBL_SC_COMMON \
             MBL_BASE, \
-            COMBO("extsc", "Sidechain source", 0.0f, limiter_sc_types_for_sc)
+            COMBO("extsc", "Sidechain source", "SC source", 0.0f, limiter_sc_types_for_sc)
 
         #define MBL_SHM_LINK_MONO \
             OPT_RETURN_MONO("link", "shml", "Side-chain shared memory link")
@@ -164,18 +164,18 @@ namespace lsp
             OPT_RETURN_STEREO("link", "shml_", "Side-chain shared memory link")
 
         #define MBL_SPLIT(id, label, enable, freq) \
-            SWITCH("se" id, "Limiter band enable" label, enable), \
+            SWITCH("se" id, "Limiter band enable" label, "Split on" label, enable), \
             LOG_CONTROL_DFL("sf" id, "Band split frequency" label, "Split" label, U_HZ, mb_limiter::FREQ, freq)
 
         #define MBL_LIMITER(id, label, alias, alr) \
-            SWITCH("on" id, "Limiter enabled" label, 1.0f), \
-            SWITCH("alr" id, "Automatic level regulation" label, alr), \
+            SWITCH("on" id, "Limiter enabled" label, "Limiter on" label, 1.0f), \
+            SWITCH("alr" id, "Automatic level regulation" label, "ALR" label, alr), \
             LOG_CONTROL("aat" id, "Automatic level regulation attack time" label, "ALR att time" alias, U_MSEC, mb_limiter::ALR_ATTACK_TIME), \
             LOG_CONTROL("art" id, "Automatic level regulation release time" label, "ALR rel time" alias, U_MSEC, mb_limiter::ALR_RELEASE_TIME), \
             LOG_CONTROL("akn" id, "Automatic level regulation knee" label, "ALR knee" alias, U_GAIN_AMP, mb_limiter::KNEE), \
-            COMBO("lm" id, "Operating mode" label, mb_limiter::LOM_DEFAULT, limiter_oper_modes), \
+            COMBO("lm" id, "Operating mode" label, "Mode" label, mb_limiter::LOM_DEFAULT, limiter_oper_modes), \
             LOG_CONTROL("th" id, "Threshold" label, "Threshold" alias, U_GAIN_AMP, mb_limiter::THRESHOLD), \
-            SWITCH("gb" id, "Gain boost" label, 1.0f), \
+            SWITCH("gb" id, "Gain boost" label, "Gain boost" label, 1.0f), \
             LOG_CONTROL("at" id, "Attack time" label, "Att time" alias, U_MSEC, mb_limiter::ATTACK_TIME), \
             LOG_CONTROL("rt" id, "Release time" label, "Rel time" alias, U_MSEC, mb_limiter::RELEASE_TIME), \
             METER_OUT_GAIN("ig" id, "Input gain meter" label, mb_limiter::THRESHOLD_MAX)
@@ -195,8 +195,8 @@ namespace lsp
 
         #define MBL_BAND_COMMON(id, label, alias) \
             METER("bfe" id, "Frequency range end" label, U_HZ, mb_limiter::OUT_FREQ), \
-            SWITCH("bs" id, "Solo band" label, 0.0f), \
-            SWITCH("bm" id, "Mute band" label, 0.0f), \
+            SWITCH("bs" id, "Solo band" label, "Solo" label, 0.0f), \
+            SWITCH("bm" id, "Mute band" label, "Mute" label, 0.0f), \
             AMP_GAIN100("bpa" id, "Band preamp" label, GAIN_AMP_0_DB), \
             LOG_CONTROL("bmk" id, "Band makeup" label, "Makeup" label, U_GAIN_AMP, mb_limiter::MAKEUP), \
             MESH("bfc" id, "Band filter chart" label, 2, mb_limiter::FFT_MESH_POINTS + 2), \
@@ -212,9 +212,9 @@ namespace lsp
             MBL_LIMITER_METERS(id "l", label " Left"), \
             MBL_LIMITER_METERS(id "r", label " Right")
 
-        #define MBL_METERS(id, label) \
-            SWITCH("ife" id, "Input FFT enable" label, 1.0f), \
-            SWITCH("ofe" id, "Output FFT enable" label, 1.0f), \
+        #define MBL_METERS(id, label, alias) \
+            SWITCH("ife" id, "Input FFT enable" label, "FFT In" alias, 1.0f), \
+            SWITCH("ofe" id, "Output FFT enable" label, "FFT Out" alias, 1.0f), \
             METER_OUT_GAIN("ilm" id, "Input level meter" label, GAIN_AMP_P_24_DB), \
             METER_OUT_GAIN("olm" id, "Output level meter" label, GAIN_AMP_P_24_DB), \
             MESH("ifg" id, "Input FFT graph" label, 2, mb_limiter::FFT_MESH_POINTS + 2), \
@@ -222,11 +222,11 @@ namespace lsp
             MESH("ag" id, "Amplification graph" label, 2, mb_limiter::FFT_MESH_POINTS + 2)
 
         #define MBL_METERS_MONO \
-            MBL_METERS("", "")
+            MBL_METERS("", "", "")
 
         #define MBL_METERS_STEREO \
-            MBL_METERS("_l", " Left"), \
-            MBL_METERS("_r", " Right")
+            MBL_METERS("_l", " Left", " L"), \
+            MBL_METERS("_r", " Right", " R")
 
         static const port_t mb_limiter_mono_ports[] =
         {

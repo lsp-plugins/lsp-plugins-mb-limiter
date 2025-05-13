@@ -147,7 +147,7 @@ namespace lsp
             LOG_CONTROL("zoom", "Graph zoom", "Zoom", U_GAIN_AMP, mb_limiter::ZOOM), \
             SWITCH("flt", "Band filter curves", "Show filters", 1.0f), \
             LOG_CONTROL("react", "FFT reactivity", "Reactivity", U_MSEC, mb_limiter::REACT_TIME), \
-            AMP_GAIN100("shift", "Shift gain", 1.0f)
+            AMP_GAIN100("shift", "Shift gain", "Shift", 1.0f)
 
         #define MBL_COMMON \
             MBL_BASE, \
@@ -197,7 +197,7 @@ namespace lsp
             METER("bfe" id, "Frequency range end" label, U_HZ, mb_limiter::OUT_FREQ), \
             SWITCH("bs" id, "Solo band" label, "Solo" label, 0.0f), \
             SWITCH("bm" id, "Mute band" label, "Mute" label, 0.0f), \
-            AMP_GAIN100("bpa" id, "Band preamp" label, GAIN_AMP_0_DB), \
+            AMP_GAIN100("bpa" id, "Band preamp" label, "Preamp" label, GAIN_AMP_0_DB), \
             LOG_CONTROL("bmk" id, "Band makeup" label, "Makeup" label, U_GAIN_AMP, mb_limiter::MAKEUP), \
             MESH("bfc" id, "Band filter chart" label, 2, mb_limiter::FFT_MESH_POINTS + 2), \
             MBL_LIMITER(id, label, alias, 1.0f)

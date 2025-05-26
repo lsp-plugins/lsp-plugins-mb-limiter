@@ -1,6 +1,6 @@
 /*
- * Copyright (C) 2020 Linux Studio Plugins Project <https://lsp-plug.in/>
- *           (C) 2020 Vladimir Sadovnikov <sadko4u@gmail.com>
+ * Copyright (C) 2025 Linux Studio Plugins Project <https://lsp-plug.in/>
+ *           (C) 2025 Vladimir Sadovnikov <sadko4u@gmail.com>
  *
  * This file is part of lsp-plugins-mb-limiter
  * Created on: 25 нояб. 2020 г.
@@ -301,7 +301,10 @@ namespace lsp
                     update_split_note_text(s);
 
                     if (flags & ui::PORT_USER_EDIT)
-                        freq_initiator = s;
+                    {
+                        if (s->bOn)
+                            freq_initiator = s;
+                    }
                     else if (s->bOn)
                         need_resort_active_splits = true;
                 }

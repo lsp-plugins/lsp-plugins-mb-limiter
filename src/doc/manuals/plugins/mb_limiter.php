@@ -127,6 +127,8 @@ This introduces additional latency but gives several benefits:</li>
 		<?php } ?>
 		<li><b>Link</b> - the shared memory link is used to receive sidechain signal.</li>
 	</ul>
+	<li><b>Pre-mix</b> - shows pre-mix control overlay.</li>
+	<li><b>Filters</b> - enables drawing tranfer function of each sidechain filter on the spectrum graph.</li>
 	<li><b>Link</b> - the name of shared memory link used to receive sidechain signal</li>
 	<li><b>Zoom</b> - zoom fader, allows to adjust zoom on the frequency chart.</li>
 	<li><b>In</b> - the input signal meter.</li>
@@ -205,4 +207,18 @@ This introduces additional latency but gives several benefits:</li>
 	<?php if (!$m) {?> 
 	<li><b>Stereo link</b> - stereo link, the degree of mutual influence between gain reduction of stereo channels</li>
 	<?php } ?>
+</ul>
+
+<p><b>Pre-mix control overlay:</b></p>
+<ul>
+	<?php if ($sc) { ?>
+	<li><b>In -> SC</b> - the amount of signal from input channel added to the Sidechain.</li>
+	<?php } ?>
+	<li><b>In -> Link</b> - the amount of signal from input channel added to the shared memory link.</li>
+	<?php if ($sc) { ?>
+	<li><b>SC -> In</b> - the amount of signal from sidechain input channel added to the input channel.</li>
+	<li><b>SC -> Link</b> - the amount of signal from sidechain input channel added to the shared memory link.</li>
+	<?php } ?>
+	<li><b>Link -> In</b> - the amount of signal from shared memory link added to the input channel.</li>
+	<li><b>Link -> SC</b> - the amount of signal from shared memory link added to the sidechain channel.</li>
 </ul>

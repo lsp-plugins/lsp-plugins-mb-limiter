@@ -157,6 +157,18 @@ namespace lsp
             MBL_BASE, \
             COMBO("extsc", "Sidechain source", "SC source", 0.0f, limiter_sc_types_for_sc)
 
+        #define MBL_PREMIX \
+            SWITCH("showpmx", "Show pre-mix overlay", "Show premix bar", 0.0f), \
+            AMP_GAIN10("in2lk", "Input to Link mix", "In to Link mix", GAIN_AMP_M_INF_DB), \
+            AMP_GAIN10("lk2in", "Link to Input mix", "Link to In mix", GAIN_AMP_M_INF_DB), \
+            AMP_GAIN10("lk2sc", "Link to Sidechain mix", "Link to SC mix", GAIN_AMP_M_INF_DB)
+
+        #define MBL_SC_PREMIX \
+            MBL_PREMIX, \
+            AMP_GAIN10("in2sc", "Input to Sidechain mix", "In to SC mix", GAIN_AMP_M_INF_DB), \
+            AMP_GAIN10("sc2in", "Sidechain to Input mix", "SC to In mix", GAIN_AMP_M_INF_DB), \
+            AMP_GAIN10("sc2lk", "Sidechain to Link mix", "SC to Link mix", GAIN_AMP_M_INF_DB)
+
         #define MBL_SHM_LINK_MONO \
             OPT_RETURN_MONO("link", "shml", "Side-chain shared memory link")
 
@@ -233,6 +245,7 @@ namespace lsp
             // Input and output audio ports
             PORTS_MONO_PLUGIN,
             MBL_SHM_LINK_MONO,
+            MBL_PREMIX,
             MBL_COMMON,
             MBL_METERS_MONO,
             MBL_MAIN_LIMITER_MONO,
@@ -262,6 +275,7 @@ namespace lsp
             // Input and output audio ports
             PORTS_STEREO_PLUGIN,
             MBL_SHM_LINK_STEREO,
+            MBL_PREMIX,
             MBL_COMMON,
             MBL_METERS_STEREO,
             MBL_MAIN_LIMITER_STEREO,
@@ -292,6 +306,7 @@ namespace lsp
             PORTS_MONO_PLUGIN,
             PORTS_MONO_SIDECHAIN,
             MBL_SHM_LINK_MONO,
+            MBL_SC_PREMIX,
             MBL_SC_COMMON,
             MBL_METERS_MONO,
             MBL_MAIN_LIMITER_MONO,
@@ -322,6 +337,7 @@ namespace lsp
             PORTS_STEREO_PLUGIN,
             PORTS_STEREO_SIDECHAIN,
             MBL_SHM_LINK_STEREO,
+            MBL_SC_PREMIX,
             MBL_SC_COMMON,
             MBL_METERS_STEREO,
             MBL_MAIN_LIMITER_STEREO,

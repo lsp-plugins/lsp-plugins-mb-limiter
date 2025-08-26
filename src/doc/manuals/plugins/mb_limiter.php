@@ -45,7 +45,7 @@ This introduces additional latency but gives several benefits:</li>
 <ul>
 	<li>Unlike classic crossovers which use IIR (Infinite Impulse Response) filters to split signal into multiple bands and shift the phase
 	of the audio signal at band split points, the <b>Linear Phase</b> allows to use FIR (Finite Impulse Response) filters which are deprived of this.
-	<li>Unlike most IIR filters which are designed using bilinear transform, linear phase filters allow to simulate their tranfer function
+	<li>Unlike most IIR filters which are designed using bilinear transform, linear phase filters allow to simulate their transfer function
 	to look like the transfer function of analog filters, without deforming it's magnitude envelope near the nyquist frequency.</li>
 	<li>Unlike design of classic Linkwitz-Riley filters, the design of IIR filters provides shorter transition zone of the filter.</li>
 </ul>
@@ -70,7 +70,7 @@ This introduces additional latency but gives several benefits:</li>
 </p>
 <?php out_image('graph/limiter-envelope', 'Envelope forms of the patch') ?>
 <p>
-	On this image, sloping lines mean the transision part of the patch.
+	On this image, sloping lines mean the transition part of the patch.
 	The flat cap in the middle before the peak is a half of attack time, the flat cap in the middle after the peak is a half of release time.
 	Also it's obvious that different envelope forms differently affect dynamics of the signal.
 </p>
@@ -127,6 +127,8 @@ This introduces additional latency but gives several benefits:</li>
 		<?php } ?>
 		<li><b>Link</b> - the shared memory link is used to receive sidechain signal.</li>
 	</ul>
+	<li><b>Pre-mix</b> - shows pre-mix control overlay.</li>
+	<li><b>Filters</b> - enables drawing tranfer function of each sidechain filter on the spectrum graph.</li>
 	<li><b>Link</b> - the name of shared memory link used to receive sidechain signal</li>
 	<li><b>Zoom</b> - zoom fader, allows to adjust zoom on the frequency chart.</li>
 	<li><b>In</b> - the input signal meter.</li>
@@ -205,4 +207,18 @@ This introduces additional latency but gives several benefits:</li>
 	<?php if (!$m) {?> 
 	<li><b>Stereo link</b> - stereo link, the degree of mutual influence between gain reduction of stereo channels</li>
 	<?php } ?>
+</ul>
+
+<p><b>Pre-mix control overlay:</b></p>
+<ul>
+	<?php if ($sc) { ?>
+	<li><b>In -> SC</b> - the amount of signal from input channel added to the Sidechain.</li>
+	<?php } ?>
+	<li><b>In -> Link</b> - the amount of signal from input channel added to the shared memory link.</li>
+	<?php if ($sc) { ?>
+	<li><b>SC -> In</b> - the amount of signal from sidechain input channel added to the input channel.</li>
+	<li><b>SC -> Link</b> - the amount of signal from sidechain input channel added to the shared memory link.</li>
+	<?php } ?>
+	<li><b>Link -> In</b> - the amount of signal from shared memory link added to the input channel.</li>
+	<li><b>Link -> SC</b> - the amount of signal from shared memory link added to the sidechain channel.</li>
 </ul>

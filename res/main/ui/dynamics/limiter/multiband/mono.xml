@@ -1,6 +1,8 @@
 <plugin resizable="true">
+	<ui:eval id="is_sidechain" value="(ex :sc) or (ex :sc_l) or (ex :sc_r)"/>
 	<ui:set id="has_solo" value="
 		:bs_1 or (:bs_2 and :se_1) or (:bs_3 and :se_2) or (:bs_4 and :se_3) or (:bs_5 and :se_4) or (:bs_6 and :se_5) or (:bs_7 and :se_6) or (:bs_8 and :se_7)"/>
+	
 	<grid rows="3" cols="5" vspacing="4" hspacing="4">
 		<!-- Row 1: Graph -->
 		<group ui:inject="GraphGroup" ipadding="0" expand="true" fill="true" text="labels.graphs.spectrum">
@@ -215,6 +217,7 @@
 			<combo id="ovs" pad.r="4" pad.v="4"/>
 			<label text="labels.dither:"/>
 			<combo id="dither" pad.r="4" pad.v="4"/>
+			<button ui:id="premix_trigger" id="showpmx" text="labels.premix" size="22" />
 			<button id="flt" text="labels.filters" size="22" ui:inject="Button_cyan"/>
 
 			<void hexpand="true" hfill="true"/>
@@ -479,4 +482,43 @@
 			</group>
 		</cell>
 	</grid>
+	
+	<!-- Premix overlay -->
+	<overlay id="showpmx" trigger="premix_trigger" hpos="1" vpos="1" halign="-1" valign="1" ipadding.t="4">
+		<group text="groups.premix" vexpand="false" ipadding="0">
+			<grid rows="3" cols="${(:is_sidechain) ? 8 : 5}" spacing="0" bg.color="bg_schema" transpose="true">
+				<ui:if test=":is_sidechain">
+					<label text="labels.premix.in_to_sc" pad.h="6" pad.v="4" />
+					<knob id="in2sc" />
+					<value id="in2sc" pad.h="6" pad.v="4" />
+				</ui:if>
+				
+				<label text="labels.premix.in_to_link" pad.h="6" pad.v="4" />
+				<knob id="in2lk" />
+				<value id="in2lk" />
+				
+				<cell rows="3"><vsep pad.h="2" bg.color="bg" reduce="true" /></cell>
+				
+				<ui:if test=":is_sidechain">
+					<label text="labels.premix.sc_to_in" pad.h="6" pad.v="4" />
+					<knob id="sc2in" />
+					<value id="sc2in" pad.h="6" pad.v="4" />
+					
+					<label text="labels.premix.sc_to_link" pad.h="6" pad.v="4" />
+					<knob id="sc2lk" />
+					<value id="sc2lk" pad.h="6" pad.v="4" />
+					
+					<cell rows="3"><vsep pad.h="2" bg.color="bg" reduce="true" /></cell>
+				</ui:if>
+				
+				<label text="labels.premix.link_to_in" pad.h="6" pad.v="4" />
+				<knob id="lk2in" />
+				<value id="lk2in" pad.h="6" pad.v="4" />
+				
+				<label text="labels.premix.link_to_sc" pad.h="6" pad.v="4" />
+				<knob id="lk2sc" />
+				<value id="lk2sc" pad.h="6" pad.v="4" />
+			</grid>
+		</group>
+	</overlay>
 </plugin>

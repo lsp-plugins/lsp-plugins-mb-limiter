@@ -1,6 +1,6 @@
 /*
- * Copyright (C) 2024 Linux Studio Plugins Project <https://lsp-plug.in/>
- *           (C) 2024 Vladimir Sadovnikov <sadko4u@gmail.com>
+ * Copyright (C) 2025 Linux Studio Plugins Project <https://lsp-plug.in/>
+ *           (C) 2025 Vladimir Sadovnikov <sadko4u@gmail.com>
  *
  * This file is part of lsp-plugins-mb-limiter
  * Created on: 22 июн 2023 г.
@@ -59,6 +59,32 @@ namespace lsp
                     XOVER_CLASSIC,
                     XOVER_LINEAR_PHASE
                 };
+
+                typedef struct premix_t
+                {
+                    float                   fInToSc;            // Input -> Sidechain mix
+                    float                   fInToLink;          // Input -> Link mix
+                    float                   fLinkToIn;          // Link -> Input mix
+                    float                   fLinkToSc;          // Link -> Sidechain mix
+                    float                   fScToIn;            // Sidechain -> Input mix
+                    float                   fScToLink;          // Sidechain -> Link mix
+
+                    float                  *vIn[2];             // Input buffer
+                    float                  *vOut[2];            // Output buffer
+                    float                  *vSc[2];             // Sidechain buffer
+                    float                  *vLink[2];           // Link buffer
+
+                    float                  *vTmpIn[2];          // Replacement buffer for input
+                    float                  *vTmpLink[2];        // Replacement buffer for link
+                    float                  *vTmpSc[2];          // Replacement buffer for sidechain
+
+                    plug::IPort            *pInToSc;            // Input -> Sidechain mix
+                    plug::IPort            *pInToLink;          // Input -> Link mix
+                    plug::IPort            *pLinkToIn;          // Link -> Input mix
+                    plug::IPort            *pLinkToSc;          // Link -> Sidechain mix
+                    plug::IPort            *pScToIn;            // Sidechain -> Input mix
+                    plug::IPort            *pScToLink;          // Sidechain -> Link mix
+                } premix_t;
 
                 typedef struct limiter_t
                 {
@@ -141,9 +167,9 @@ namespace lsp
                     band_t                 *vPlan[meta::mb_limiter::BANDS_MAX];     // Actual plan
                     limiter_t               sLimiter;           // Output limiter
 
-                    const float            *vIn;                // Input data
-                    const float            *vSc;                // Sidechain data
-                    const float            *vShmIn;             // Shared memory input
+                    float                  *vIn;                // Input data
+                    float                  *vSc;                // Sidechain data
+                    float                  *vShmIn;             // Shared memory input
                     float                  *vOut;               // Output data
                     float                  *vData;              // Intermediate buffer with processed data
                     float                  *vInBuf;             // Oversampled input data buffer
@@ -171,6 +197,7 @@ namespace lsp
             protected:
                 dspu::Analyzer          sAnalyzer;          // Analyzer
                 dspu::Counter           sCounter;           // Sync counter
+                premix_t                sPremix;            // Premix
                 uint32_t                nChannels;          // Number of channels
                 xover_mode_t            nMode;              // Operating mode
                 bool                    bSidechain;         // Sidechain switch is present
@@ -184,7 +211,6 @@ namespace lsp
                 uint32_t                nLookahead;         // Lookahead buffer size
 
                 channel_t              *vChannels;          // Channels
-                float                  *vEmptyBuf;          // Empty buffer filled with zeros
                 float                  *vTmpBuf;            // Temporary buffer
                 float                  *vEnvBuf;            // Temporary envelope buffer
                 uint32_t               *vIndexes;           // Analyzer FFT indexes
@@ -214,6 +240,8 @@ namespace lsp
                 uint8_t                *pData;
 
             protected:
+                void                    update_premix();
+                void                    premix_channel(uint32_t channel, size_t count);
                 void                    output_meters();
                 void                    output_fft_curves();
                 void                    perform_analysis(size_t samples);

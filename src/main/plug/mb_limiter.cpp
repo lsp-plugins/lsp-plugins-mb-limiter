@@ -1,6 +1,6 @@
 /*
- * Copyright (C) 2024 Linux Studio Plugins Project <https://lsp-plug.in/>
- *           (C) 2024 Vladimir Sadovnikov <sadko4u@gmail.com>
+ * Copyright (C) 2025 Linux Studio Plugins Project <https://lsp-plug.in/>
+ *           (C) 2025 Vladimir Sadovnikov <sadko4u@gmail.com>
  *
  * This file is part of lsp-plugins-mb-limiter
  * Created on: 22 июн 2023 г.
@@ -33,13 +33,13 @@
 
 #include <private/plugins/mb_limiter.h>
 
-/* The size of temporary buffer for audio processing */
-#define BUFFER_SIZE         0x400U
-
 namespace lsp
 {
     namespace plugins
     {
+        /* The size of temporary buffer for audio processing */
+        static constexpr size_t BUFFER_SIZE     = 0x200;
+
         //---------------------------------------------------------------------
         // Plugin factory
         static const meta::plugin_t *plugins[] =
@@ -62,6 +62,31 @@ namespace lsp
         mb_limiter::mb_limiter(const meta::plugin_t *meta):
             Module(meta)
         {
+            sPremix.fInToSc     = GAIN_AMP_M_INF_DB;
+            sPremix.fInToLink   = GAIN_AMP_M_INF_DB;
+            sPremix.fLinkToIn   = GAIN_AMP_M_INF_DB;
+            sPremix.fLinkToSc   = GAIN_AMP_M_INF_DB;
+            sPremix.fScToIn     = GAIN_AMP_M_INF_DB;
+            sPremix.fScToLink   = GAIN_AMP_M_INF_DB;
+
+            for (size_t i=0; i<2; ++i)
+            {
+                sPremix.vIn[i]      = NULL;
+                sPremix.vOut[i]     = NULL;
+                sPremix.vSc[i]      = NULL;
+                sPremix.vLink[i]    = NULL;
+                sPremix.vTmpIn[i]   = NULL;
+                sPremix.vTmpSc[i]   = NULL;
+                sPremix.vTmpLink[i] = NULL;
+            }
+
+            sPremix.pInToSc     = NULL;
+            sPremix.pInToLink   = NULL;
+            sPremix.pLinkToIn   = NULL;
+            sPremix.pLinkToSc   = NULL;
+            sPremix.pScToIn     = NULL;
+            sPremix.pScToLink   = NULL;
+
             nChannels           = 1;
             nMode               = XOVER_CLASSIC;
             bSidechain          = false;
@@ -84,7 +109,6 @@ namespace lsp
             nLookahead          = 0;
 
             vChannels           = NULL;
-            vEmptyBuf           = NULL;
             vTmpBuf             = NULL;
             vEnvBuf             = NULL;
             vFreqs              = NULL;
@@ -152,6 +176,7 @@ namespace lsp
                 szof_fft_graph * 2 +            // vTrTmp
                 szof_fft_graph * 2 +            // vFc
                 nChannels * (
+                    szof_buf*3 +                // sPremix
                     szof_buf +                  // vData
                     szof_ovs_buf +              // vInBuf
                     szof_ovs_buf +              // vScBuf
@@ -185,7 +210,6 @@ namespace lsp
 
             // Allocate objects
             vChannels               = advance_ptr_bytes<channel_t>(ptr, szof_channel * nChannels);
-            vEmptyBuf               = advance_ptr_bytes<float>(ptr, szof_buf);
             vTmpBuf                 = advance_ptr_bytes<float>(ptr, szof_ovs_buf);
             vEnvBuf                 = advance_ptr_bytes<float>(ptr, szof_ovs_buf);
             vFreqs                  = advance_ptr_bytes<float>(ptr, szof_fft_graph);
@@ -193,6 +217,14 @@ namespace lsp
             vTr                     = advance_ptr_bytes<float>(ptr, szof_fft_graph * 2);
             vTrTmp                  = advance_ptr_bytes<float>(ptr, szof_fft_graph * 2);
             vFc                     = advance_ptr_bytes<float>(ptr, szof_fft_graph * 2);
+
+            // Initialize pre-mix
+            for (size_t i=0; i<nChannels; ++i)
+            {
+                sPremix.vTmpIn[i]       = advance_ptr_bytes<float>(ptr, szof_buf);
+                sPremix.vTmpLink[i]     = advance_ptr_bytes<float>(ptr, szof_buf);
+                sPremix.vTmpSc[i]       = advance_ptr_bytes<float>(ptr, szof_buf);
+            }
 
             // Initialize objects
             float lk_latency        =
@@ -381,6 +413,19 @@ namespace lsp
             for (size_t i=0; i<nChannels; ++i)
                 BIND_PORT(vChannels[i].pShmIn);
 
+            // Pre-mixing ports
+            lsp_trace("Binding pre-mix ports");
+            SKIP_PORT("Show premix overlay");
+            BIND_PORT(sPremix.pInToLink);
+            BIND_PORT(sPremix.pLinkToIn);
+            BIND_PORT(sPremix.pLinkToSc);
+            if (bSidechain)
+            {
+                BIND_PORT(sPremix.pInToSc);
+                BIND_PORT(sPremix.pScToIn);
+                BIND_PORT(sPremix.pScToLink);
+            }
+
             // Bind common ports
             lsp_trace("Binding common ports");
             BIND_PORT(pBypass);
@@ -536,8 +581,6 @@ namespace lsp
                     BIND_PORT(b->sLimiter.pReductionMeter);
                 }
             }
-
-            dsp::fill_zero(vEmptyBuf, BUFFER_SIZE);
         }
 
         void mb_limiter::destroy()
@@ -818,8 +861,21 @@ namespace lsp
             return SCM_INTERNAL;
         }
 
+        void mb_limiter::update_premix()
+        {
+            sPremix.fInToSc     = (sPremix.pInToSc != NULL)     ? sPremix.pInToSc->value()      : GAIN_AMP_M_INF_DB;
+            sPremix.fInToLink   = (sPremix.pInToLink != NULL)   ? sPremix.pInToLink->value()    : GAIN_AMP_M_INF_DB;
+            sPremix.fLinkToIn   = (sPremix.pLinkToIn != NULL)   ? sPremix.pLinkToIn->value()    : GAIN_AMP_M_INF_DB;
+            sPremix.fLinkToSc   = (sPremix.pLinkToSc != NULL)   ? sPremix.pLinkToSc->value()    : GAIN_AMP_M_INF_DB;
+            sPremix.fScToIn     = (sPremix.pScToIn != NULL)     ? sPremix.pScToIn->value()      : GAIN_AMP_M_INF_DB;
+            sPremix.fScToLink   = (sPremix.pScToLink != NULL)   ? sPremix.pScToLink->value()    : GAIN_AMP_M_INF_DB;
+        }
+
         void mb_limiter::update_settings()
         {
+
+            update_premix();
+
             dspu::filter_params_t fp;
 
             // Determine number of channels
@@ -1456,6 +1512,122 @@ namespace lsp
             }
         }
 
+        void mb_limiter::premix_channel(uint32_t channel, size_t count)
+        {
+            // Get pointers to buffers and advance position
+            channel_t * const c     = &vChannels[channel];
+            float * const in_buf    = sPremix.vIn[channel];
+            float * const out_buf   = sPremix.vOut[channel];
+            float * const sc_buf    = sPremix.vSc[channel];
+            float * const link_buf  = sPremix.vLink[channel];
+
+            c->vIn                  = in_buf;
+            c->vOut                 = out_buf;
+            c->vSc                  = sc_buf;
+            c->vShmIn               = link_buf;
+
+            // Update pointers
+            sPremix.vIn[channel]   += count;
+            sPremix.vOut[channel]  += count;
+            if (sPremix.vSc[channel] != NULL)
+                sPremix.vSc[channel]   += count;
+            if (sPremix.vLink[channel] != NULL)
+                sPremix.vLink[channel] += count;
+
+            // Perform transformation
+            if (bSidechain)
+            {
+                // (Sc, Link) -> In
+                if ((sc_buf != NULL) && (sPremix.fScToIn > GAIN_AMP_M_INF_DB))
+                {
+                    c->vIn              = sPremix.vTmpIn[channel];
+                    dsp::fmadd_k4(c->vIn, in_buf, sc_buf, sPremix.fScToIn, count);
+
+                    if ((link_buf != NULL) && (sPremix.fLinkToIn > GAIN_AMP_M_INF_DB))
+                        dsp::fmadd_k3(c->vIn, link_buf, sPremix.fLinkToIn, count);
+                }
+                else if ((link_buf != NULL) && (sPremix.fLinkToIn > GAIN_AMP_M_INF_DB))
+                {
+                    c->vIn              = sPremix.vTmpIn[channel];
+                    dsp::fmadd_k4(c->vIn, in_buf, link_buf, sPremix.fLinkToIn, count);
+                }
+
+                // (In, Link) -> Sc
+                if (sPremix.fInToSc > GAIN_AMP_M_INF_DB)
+                {
+                    c->vSc              = sPremix.vTmpSc[channel];
+                    if (sc_buf != NULL)
+                        dsp::fmadd_k4(c->vSc, sc_buf, in_buf, sPremix.fInToSc, count);
+                    else
+                        dsp::mul_k3(c->vSc, in_buf, sPremix.fInToSc, count);
+
+                    if ((link_buf != NULL) && (sPremix.fLinkToSc > GAIN_AMP_M_INF_DB))
+                        dsp::fmadd_k3(c->vSc, link_buf, sPremix.fLinkToSc, count);
+                }
+                else if ((link_buf != NULL) && (sPremix.fLinkToSc > GAIN_AMP_M_INF_DB))
+                {
+                    c->vSc              = sPremix.vTmpSc[channel];
+                    if (sc_buf != NULL)
+                        dsp::fmadd_k4(c->vSc, sc_buf, link_buf, sPremix.fLinkToSc, count);
+                    else
+                        dsp::mul_k3(c->vSc, link_buf, sPremix.fLinkToSc, count);
+                }
+
+                // (In, Sc) -> Link
+                if (sPremix.fInToLink > GAIN_AMP_M_INF_DB)
+                {
+                    c->vShmIn           = sPremix.vTmpLink[channel];
+                    if (link_buf != NULL)
+                        dsp::fmadd_k4(c->vShmIn, link_buf, in_buf, sPremix.fInToLink, count);
+                    else
+                        dsp::mul_k3(c->vShmIn, in_buf, sPremix.fInToLink, count);
+
+                    if ((sc_buf != NULL) && (sPremix.fScToLink > GAIN_AMP_M_INF_DB))
+                        dsp::fmadd_k3(c->vShmIn, sc_buf, sPremix.fScToLink, count);
+                }
+                else if ((sc_buf != NULL) && (sPremix.fScToLink > GAIN_AMP_M_INF_DB))
+                {
+                    c->vShmIn           = sPremix.vTmpLink[channel];
+                    if (link_buf != NULL)
+                        dsp::fmadd_k4(c->vShmIn, link_buf, sc_buf, sPremix.fScToLink, count);
+                    else
+                        dsp::mul_k3(c->vShmIn, sc_buf, sPremix.fScToLink, count);
+                }
+            }
+            else
+            {
+                // Link -> (In, Sc)
+                if (link_buf != NULL)
+                {
+                    // Link -> In
+                    if (sPremix.fLinkToIn > GAIN_AMP_M_INF_DB)
+                    {
+                        c->vIn          = sPremix.vTmpIn[channel];
+                        dsp::fmadd_k4(c->vIn, in_buf, link_buf, sPremix.fLinkToIn, count);
+                    }
+                    // Link -> Sc
+                    if (sPremix.fLinkToSc > GAIN_AMP_M_INF_DB)
+                    {
+                        c->vSc          = sPremix.vTmpSc[channel];
+                        if (sc_buf != NULL)
+                            dsp::fmadd_k4(c->vSc, sc_buf, link_buf, sPremix.fLinkToSc, count);
+                        else
+                            dsp::mul_k3(c->vSc, link_buf, sPremix.fLinkToSc, count);
+                    }
+                }
+
+                // In -> Link
+                if (sPremix.fInToLink > GAIN_AMP_M_INF_DB)
+                {
+                    c->vShmIn       = sPremix.vTmpLink[channel];
+                    if (link_buf != NULL)
+                        dsp::fmadd_k4(c->vShmIn, link_buf, in_buf, sPremix.fInToLink, count);
+                    else
+                        dsp::mul_k3(c->vShmIn, in_buf, sPremix.fInToLink, count);
+                }
+            }
+        }
+
         void mb_limiter::process(size_t samples)
         {
             // Bind input signal
@@ -1463,32 +1635,36 @@ namespace lsp
             {
                 channel_t *c        = &vChannels[i];
 
-                c->vIn              = c->pIn->buffer<float>();
-                c->vOut             = c->pOut->buffer<float>();
-                c->vSc              = (c->pSc != NULL) ? c->pSc->buffer<float>() : NULL;
-                c->vShmIn           = NULL;
+                sPremix.vIn[i]      = c->pIn->buffer<float>();
+                sPremix.vOut[i]     = c->pOut->buffer<float>();
+                sPremix.vSc[i]      = (c->pSc != NULL) ? c->pSc->buffer<float>() : sPremix.vIn[i];
+                sPremix.vLink[i]    = NULL;
+
+                core::AudioBuffer *shm_buf  = (c->pShmIn != NULL) ? c->pShmIn->buffer<core::AudioBuffer>() : NULL;
+                if ((shm_buf != NULL) && (shm_buf->active()))
+                    sPremix.vLink[i]    = shm_buf->buffer();
 
                 c->sLimiter.fInLevel        = GAIN_AMP_M_INF_DB;
                 c->sLimiter.fReductionLevel = GAIN_AMP_P_96_DB;
 
                 for (size_t i=0; i<meta::mb_limiter::BANDS_MAX; ++i)
                 {
-                    band_t *b           = &c->vBands[i];
+                    band_t *b                   = &c->vBands[i];
                     b->sLimiter.fInLevel        = GAIN_AMP_M_INF_DB;
                     b->sLimiter.fReductionLevel = GAIN_AMP_P_96_DB;
                 }
-
-                core::AudioBuffer *shm_buf  = (c->pShmIn != NULL) ? c->pShmIn->buffer<core::AudioBuffer>() : NULL;
-                if ((shm_buf != NULL) && (shm_buf->active()))
-                    c->vShmIn           = shm_buf->buffer();
             }
 
             // Do main processing
             for (size_t offset=0; offset < samples;)
             {
                 // Compute number of samples to process
-                size_t count        = lsp_min(samples - offset, BUFFER_SIZE);
-                size_t ovs_count    = count * vChannels[0].sScOver.get_oversampling();
+                const size_t count          = lsp_min(samples - offset, BUFFER_SIZE);
+                const size_t ovs_count      = count * vChannels[0].sScOver.get_oversampling();
+
+                // Pre-mix channels
+                for (size_t i=0; i<nChannels; ++i)
+                    premix_channel(i, count);
 
                 // Perform multiband processing
                 oversample_data(count, ovs_count);
@@ -1510,16 +1686,6 @@ namespace lsp
                 perform_analysis(count);
 
                 // Update pointers
-                for (size_t i=0; i<nChannels; ++i)
-                {
-                    channel_t *c        = &vChannels[i];
-                    c->vIn             += count;
-                    c->vOut            += count;
-                    if (c->vSc != NULL)
-                        c->vSc             += count;
-                    if (c->vShmIn != NULL)
-                        c->vShmIn          += count;
-                }
                 offset += count;
             }
 
@@ -1555,20 +1721,35 @@ namespace lsp
                 {
                     case SCM_EXTERNAL:
                     {
-                        const float *buf = (c->vSc != NULL) ? c->vSc : vEmptyBuf;
-                        c->sScOver.upsample(c->vScBuf, buf, samples);
-                        c->sScBoost.process(c->vScBuf, c->vScBuf, ovs_samples);
+                        if (c->vSc != NULL)
+                        {
+                            c->sScOver.upsample(c->vScBuf, c->vSc, samples);
+                            c->sScBoost.process(c->vScBuf, c->vScBuf, ovs_samples);
+                        }
+                        else
+                            dsp::fill_zero(c->vScBuf, ovs_samples);
                         break;
                     }
                     case SCM_LINK:
                     {
-                        const float *buf = (c->vShmIn != NULL) ? c->vShmIn : vEmptyBuf;
-                        c->sScOver.upsample(c->vScBuf, buf, samples);
-                        c->sScBoost.process(c->vScBuf, c->vScBuf, ovs_samples);
+                        if (c->vShmIn != NULL)
+                        {
+                            c->sScOver.upsample(c->vScBuf, c->vShmIn, samples);
+                            c->sScBoost.process(c->vScBuf, c->vScBuf, ovs_samples);
+                        }
+                        else
+                            dsp::fill_zero(c->vScBuf, ovs_samples);
                         break;
                     }
+                    case SCM_INTERNAL:
                     default:
-                        c->sScBoost.process(c->vScBuf, c->vInBuf, ovs_samples);
+                        if (c->pSc == NULL)
+                        {
+                            c->sScOver.upsample(c->vScBuf, c->vSc, samples);
+                            c->sScBoost.process(c->vScBuf, c->vScBuf, ovs_samples);
+                        }
+                        else
+                            c->sScBoost.process(c->vScBuf, c->vInBuf, ovs_samples);
                         break;
                 }
             }
@@ -1904,6 +2085,32 @@ namespace lsp
         {
             v->write_object("sAnalyzer", &sAnalyzer);
             v->write_object("sCounter", &sCounter);
+            v->begin_object("sPremix", &sPremix, sizeof(premix_t));
+            {
+                v->write("fInToSc", sPremix.fInToSc);
+                v->write("fInToLink", sPremix.fInToLink);
+                v->write("fLinkToIn", sPremix.fLinkToIn);
+                v->write("fLinkToSc", sPremix.fLinkToSc);
+                v->write("fScToIn", sPremix.fScToIn);
+                v->write("fScToLink", sPremix.fScToLink);
+
+                v->writev("vIn", sPremix.vIn, 2);
+                v->writev("vOut", sPremix.vOut, 2);
+                v->writev("vSc", sPremix.vSc, 2);
+                v->writev("vLink", sPremix.vLink, 2);
+                v->writev("vTmpIn", sPremix.vTmpIn, 2);
+                v->writev("vTmpLink", sPremix.vTmpLink, 2);
+                v->writev("vTmpSc", sPremix.vTmpSc, 2);
+
+                v->write("pInToSc", sPremix.pInToSc);
+                v->write("pInToLink", sPremix.pInToLink);
+                v->write("pLinkToIn", sPremix.pLinkToIn);
+                v->write("pLinkToSc", sPremix.pLinkToSc);
+                v->write("pScToIn", sPremix.pScToIn);
+                v->write("pScToLink", sPremix.pScToLink);
+            }
+            v->end_object();
+
             v->write("nChannels", nChannels);
             v->write("nMode", nMode);
             v->write("bSidechain", bSidechain);
@@ -2004,7 +2211,6 @@ namespace lsp
             }
             v->end_array();
 
-            v->write("vEmptyBuf", vEmptyBuf);
             v->write("vTmpBuf", vTmpBuf);
             v->write("vEnvBuf", vEnvBuf);
             v->write("vIndexes", vIndexes);

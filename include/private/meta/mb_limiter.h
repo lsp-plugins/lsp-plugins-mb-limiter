@@ -1,6 +1,6 @@
 /*
- * Copyright (C) 2023 Linux Studio Plugins Project <https://lsp-plug.in/>
- *           (C) 2023 Vladimir Sadovnikov <sadko4u@gmail.com>
+ * Copyright (C) 2025 Linux Studio Plugins Project <https://lsp-plug.in/>
+ *           (C) 2025 Vladimir Sadovnikov <sadko4u@gmail.com>
  *
  * This file is part of lsp-plugins-mb-limiter
  * Created on: 22 июн 2023 г.
@@ -118,27 +118,30 @@ namespace lsp
             {
                 OVS_NONE,
 
-                OVS_HALF_2X2,
-                OVS_HALF_2X3,
-                OVS_HALF_3X2,
-                OVS_HALF_3X3,
-                OVS_HALF_4X2,
-                OVS_HALF_4X3,
-                OVS_HALF_6X2,
-                OVS_HALF_6X3,
-                OVS_HALF_8X2,
-                OVS_HALF_8X3,
+                OVS_HALF_2X16BIT,
+                OVS_HALF_2X24BIT,
+                OVS_HALF_3X16BIT,
+                OVS_HALF_3X24BIT,
+                OVS_HALF_4X16BIT,
+                OVS_HALF_4X24BIT,
+                OVS_HALF_6X16BIT,
+                OVS_HALF_6X24BIT,
+                OVS_HALF_8X16BIT,
+                OVS_HALF_8X24BIT,
 
-                OVS_FULL_2X2,
-                OVS_FULL_2X3,
-                OVS_FULL_3X2,
-                OVS_FULL_3X3,
-                OVS_FULL_4X2,
-                OVS_FULL_4X3,
-                OVS_FULL_6X2,
-                OVS_FULL_6X3,
-                OVS_FULL_8X2,
-                OVS_FULL_8X3,
+                OVS_FULL_2X16BIT,
+                OVS_FULL_2X24BIT,
+                OVS_FULL_3X16BIT,
+                OVS_FULL_3X24BIT,
+                OVS_FULL_4X16BIT,
+                OVS_FULL_4X24BIT,
+                OVS_FULL_6X16BIT,
+                OVS_FULL_6X24BIT,
+                OVS_FULL_8X16BIT,
+                OVS_FULL_8X24BIT,
+
+                OVS_TRUE_PEAK_16BIT,
+                OVS_TRUE_PEAK_24BIT,
 
                 OVS_DEFAULT     = OVS_NONE
             };

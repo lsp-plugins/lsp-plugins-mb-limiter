@@ -86,6 +86,9 @@ namespace lsp
             { "Full x8/16 bit", "oversampler.full.8x16bit"  },
             { "Full x8/24 bit", "oversampler.full.8x24bit"  },
 
+            { "True Peak/16 bit", "oversampler.true_peak.16bit"  },
+            { "True Peak/24 bit", "oversampler.true_peak.24bit"  },
+
             { NULL, NULL }
         };
 

@@ -2,7 +2,7 @@
 	<ui:eval id="is_sidechain" value="(ex :sc) or (ex :sc_l) or (ex :sc_r)"/>
 	<ui:set id="has_solo" value="
 		:bs_1 or (:bs_2 and :se_1) or (:bs_3 and :se_2) or (:bs_4 and :se_3) or (:bs_5 and :se_4) or (:bs_6 and :se_5) or (:bs_7 and :se_6) or (:bs_8 and :se_7)"/>
-	
+
 	<grid rows="3" cols="5" vspacing="4" hspacing="4">
 		<!-- Row 1: Graph -->
 		<group ui:inject="GraphGroup" ipadding="0" expand="true" fill="true" text="labels.graphs.spectrum">
@@ -42,6 +42,18 @@
 					<marker value="0 db" ox="1" oy="0"/>
 					<marker value="-24 db" ox="1" oy="0"/>
 					<marker value="-48 db" ox="1" oy="0"/>
+				</ui:with>
+
+				<!-- Piano keys -->
+				<embed oy="4" start.x="midi_freq_start(12, 127)" start.y="20" end.x="midi_freq_end(12, 127)" end.y="44" valign="1" alpha="0" visibility=":_ui_graph_piano_layout">
+					<piano natural="false" note.min="12" note.max="127" height="24" editable="false" selectable="false" border="0"/>
+				</embed>
+
+				<!-- Octave text -->
+				<ui:with ox="0" oy="4" y="44" halign="1" valign="1" pgroup="0" priority="10" visibility=":_ui_graph_piano_layout" pad.b="2">
+					<ui:for id="octave" first="0" last="9">
+						<text x="midi_freq(12 * ${:octave + 1})" text="lists.notes.fmt.c" text:octave="${octave}" valign="1" halign="0"/>
+					</ui:for>
 				</ui:with>
 
 				<!-- Band markers -->
@@ -88,6 +100,7 @@
 				<axis min="-72 db / (:zoom ** 3)" max="48 db * (:zoom ** 2)" color="graph_prim" angle="0.5" log="true"/>
 				<axis min="-1" max="1" visibility="false" angle="0.5"/>
 				<axis min="-72 db" max="48 db" color="graph_prim" angle="0.5" log="true"/>
+				<axis min="0" max=":_a_scaled_height" visibility="false" angle="0.5"/>
 
 				<!-- Text -->
 				<ui:with ox="0" oy="2" y="0" halign="1" valign="1">
@@ -507,7 +520,7 @@
 			</group>
 		</cell>
 	</grid>
-	
+
 	<!-- Premix overlay -->
 	<overlay id="showpmx" trigger="premix_trigger" hpos="1" vpos="1" halign="-1" valign="1" ipadding.t="4">
 		<group text="groups.premix" vexpand="false" ipadding="0">
@@ -517,29 +530,29 @@
 					<knob id="in2sc" />
 					<value id="in2sc" pad.h="6" pad.v="4" />
 				</ui:if>
-				
+
 				<label text="labels.premix.in_to_link" pad.h="6" pad.v="4" />
 				<knob id="in2lk" />
 				<value id="in2lk" />
-				
+
 				<cell rows="3"><vsep pad.h="2" bg.color="bg" reduce="true" /></cell>
-				
+
 				<ui:if test=":is_sidechain">
 					<label text="labels.premix.sc_to_in" pad.h="6" pad.v="4" />
 					<knob id="sc2in" />
 					<value id="sc2in" pad.h="6" pad.v="4" />
-					
+
 					<label text="labels.premix.sc_to_link" pad.h="6" pad.v="4" />
 					<knob id="sc2lk" />
 					<value id="sc2lk" pad.h="6" pad.v="4" />
-					
+
 					<cell rows="3"><vsep pad.h="2" bg.color="bg" reduce="true" /></cell>
 				</ui:if>
-				
+
 				<label text="labels.premix.link_to_in" pad.h="6" pad.v="4" />
 				<knob id="lk2in" />
 				<value id="lk2in" pad.h="6" pad.v="4" />
-				
+
 				<label text="labels.premix.link_to_sc" pad.h="6" pad.v="4" />
 				<knob id="lk2sc" />
 				<value id="lk2sc" pad.h="6" pad.v="4" />

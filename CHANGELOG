@@ -5,6 +5,7 @@
 === 1.0.16 ===
 * More precise (less noisy) oversampling modes.
 * Added support of TruePeak oversampling modes.
+* Updated build scripts and dependencies.
 
 === 1.0.15 ===
 * Added audio pre-mixing controls.

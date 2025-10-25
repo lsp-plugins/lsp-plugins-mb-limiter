@@ -2,6 +2,9 @@
 * RECENT CHANGES
 *******************************************************************************
 
+=== 1.0.17 ===
+
+
 === 1.0.16 ===
 * More precise (less noisy) oversampling modes.
 * Added support of TruePeak oversampling modes.

@@ -240,6 +240,7 @@ namespace lsp
                 uint8_t                *pData;
 
             protected:
+                dspu::over_mode_t       decode_oversampling_mode(size_t mode);
                 void                    update_premix();
                 void                    premix_channel(uint32_t channel, size_t count);
                 void                    output_meters();
@@ -261,7 +262,6 @@ namespace lsp
 
             protected:
                 static dspu::limiter_mode_t     decode_limiter_mode(ssize_t mode);
-                static dspu::over_mode_t        decode_oversampling_mode(size_t mode);
                 static bool                     decode_filtering(size_t mode);
                 static size_t                   decode_dithering(size_t mode);
                 static size_t                   select_fft_rank(size_t sample_rate);

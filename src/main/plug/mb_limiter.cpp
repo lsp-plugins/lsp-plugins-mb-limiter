@@ -57,6 +57,24 @@ namespace lsp
 
         static plug::Factory factory(plugin_factory, plugins, 4);
 
+        typedef struct true_peak_mode_t
+        {
+            uint32_t            frequency;
+            uint32_t            multiplier;
+            dspu::over_mode_t   modes[2];
+        } true_peak_mode_t;
+
+        static const true_peak_mode_t true_peak_modes[] =
+        {
+            { 0,            8,  { dspu::OM_LANCZOS_8X16BIT, dspu::OM_LANCZOS_8X24BIT}   },
+            { 22050,        8,  { dspu::OM_LANCZOS_8X16BIT, dspu::OM_LANCZOS_8X24BIT}   },
+            { 29400,        6,  { dspu::OM_LANCZOS_6X16BIT, dspu::OM_LANCZOS_6X24BIT}   },
+            { 44100,        4,  { dspu::OM_LANCZOS_4X16BIT, dspu::OM_LANCZOS_4X24BIT}   },
+            { 58800,        3,  { dspu::OM_LANCZOS_3X16BIT, dspu::OM_LANCZOS_3X24BIT}   },
+            { 88200,        2,  { dspu::OM_LANCZOS_2X16BIT, dspu::OM_LANCZOS_2X24BIT}   },
+            { 176400,       1,  { dspu::OM_NONE, dspu::OM_NONE}                         },
+        };
+
         //---------------------------------------------------------------------
         // Implementation
         mb_limiter::mb_limiter(const meta::plugin_t *meta):
@@ -710,35 +728,49 @@ namespace lsp
         {
             switch (mode)
             {
-                case meta::mb_limiter::OVS_HALF_2X2:
-                case meta::mb_limiter::OVS_HALF_2X3:
-                case meta::mb_limiter::OVS_FULL_2X2:
-                case meta::mb_limiter::OVS_FULL_2X3:
+                case meta::mb_limiter::OVS_HALF_2X16BIT:
+                case meta::mb_limiter::OVS_HALF_2X24BIT:
+                case meta::mb_limiter::OVS_FULL_2X16BIT:
+                case meta::mb_limiter::OVS_FULL_2X24BIT:
                     return fSampleRate * 2;
 
-                case meta::mb_limiter::OVS_HALF_3X2:
-                case meta::mb_limiter::OVS_HALF_3X3:
-                case meta::mb_limiter::OVS_FULL_3X2:
-                case meta::mb_limiter::OVS_FULL_3X3:
+                case meta::mb_limiter::OVS_HALF_3X16BIT:
+                case meta::mb_limiter::OVS_HALF_3X24BIT:
+                case meta::mb_limiter::OVS_FULL_3X16BIT:
+                case meta::mb_limiter::OVS_FULL_3X24BIT:
                     return fSampleRate * 3;
 
-                case meta::mb_limiter::OVS_HALF_4X2:
-                case meta::mb_limiter::OVS_HALF_4X3:
-                case meta::mb_limiter::OVS_FULL_4X2:
-                case meta::mb_limiter::OVS_FULL_4X3:
+                case meta::mb_limiter::OVS_HALF_4X16BIT:
+                case meta::mb_limiter::OVS_HALF_4X24BIT:
+                case meta::mb_limiter::OVS_FULL_4X16BIT:
+                case meta::mb_limiter::OVS_FULL_4X24BIT:
                     return fSampleRate * 4;
 
-                case meta::mb_limiter::OVS_HALF_6X2:
-                case meta::mb_limiter::OVS_HALF_6X3:
-                case meta::mb_limiter::OVS_FULL_6X2:
-                case meta::mb_limiter::OVS_FULL_6X3:
+                case meta::mb_limiter::OVS_HALF_6X16BIT:
+                case meta::mb_limiter::OVS_HALF_6X24BIT:
+                case meta::mb_limiter::OVS_FULL_6X16BIT:
+                case meta::mb_limiter::OVS_FULL_6X24BIT:
                     return fSampleRate * 6;
 
-                case meta::mb_limiter::OVS_HALF_8X2:
-                case meta::mb_limiter::OVS_HALF_8X3:
-                case meta::mb_limiter::OVS_FULL_8X2:
-                case meta::mb_limiter::OVS_FULL_8X3:
+                case meta::mb_limiter::OVS_HALF_8X16BIT:
+                case meta::mb_limiter::OVS_HALF_8X24BIT:
+                case meta::mb_limiter::OVS_FULL_8X16BIT:
+                case meta::mb_limiter::OVS_FULL_8X24BIT:
                     return fSampleRate * 8;
+
+                case meta::mb_limiter::OVS_TRUE_PEAK_16BIT:
+                case meta::mb_limiter::OVS_TRUE_PEAK_24BIT:
+                {
+                    const uint32_t srate = fSampleRate;
+                    size_t best = 0;
+
+                    for (size_t i=1; i<sizeof(true_peak_modes)/ sizeof(true_peak_mode_t); ++i)
+                    {
+                        if (true_peak_modes[i].frequency <= srate)
+                            best    = i;
+                    }
+                    return fSampleRate * true_peak_modes[best].multiplier;
+                }
 
                 default:
                     break;
@@ -793,16 +825,31 @@ namespace lsp
 
             switch (mode)
             {
-                L_KEY(2X2)
-                L_KEY(2X3)
-                L_KEY(3X2)
-                L_KEY(3X3)
-                L_KEY(4X2)
-                L_KEY(4X3)
-                L_KEY(6X2)
-                L_KEY(6X3)
-                L_KEY(8X2)
-                L_KEY(8X3)
+                L_KEY(2X16BIT)
+                L_KEY(2X24BIT)
+                L_KEY(3X16BIT)
+                L_KEY(3X24BIT)
+                L_KEY(4X16BIT)
+                L_KEY(4X24BIT)
+                L_KEY(6X16BIT)
+                L_KEY(6X24BIT)
+                L_KEY(8X16BIT)
+                L_KEY(8X24BIT)
+
+                case meta::mb_limiter::OVS_TRUE_PEAK_16BIT:
+                case meta::mb_limiter::OVS_TRUE_PEAK_24BIT:
+                {
+                    const size_t index = (mode == meta::mb_limiter::OVS_TRUE_PEAK_24BIT) ? 1: 0;
+                    const uint32_t srate = fSampleRate;
+                    size_t best = 0;
+
+                    for (size_t i=1; i<sizeof(true_peak_modes)/ sizeof(true_peak_mode_t); ++i)
+                    {
+                        if (true_peak_modes[i].frequency <= srate)
+                            best    = i;
+                    }
+                    return true_peak_modes[best].modes[index];
+                }
 
                 case meta::mb_limiter::OVS_NONE:
                 default:
@@ -814,7 +861,7 @@ namespace lsp
 
         bool mb_limiter::decode_filtering(size_t mode)
         {
-            return (mode >= meta::mb_limiter::OVS_FULL_2X2) && (mode <= meta::mb_limiter::OVS_FULL_8X3);
+            return (mode >= meta::mb_limiter::OVS_FULL_2X16BIT) && (mode <= meta::mb_limiter::OVS_FULL_8X24BIT);
         }
 
         size_t mb_limiter::decode_dithering(size_t mode)

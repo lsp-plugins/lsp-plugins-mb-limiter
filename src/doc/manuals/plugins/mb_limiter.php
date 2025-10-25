@@ -116,6 +116,8 @@ This introduces additional latency but gives several benefits:</li>
 		<li><b>Full 6x/24 bit</b> - 6x Lanczos oversampling of Sidechain signal and Input signal with 24-bit precision of output samples.</li>
 		<li><b>Full 8x/16 bit</b> - 8x Lanczos oversampling of Sidechain signal and Input signal with 16-bit precision of output samples.</li>
 		<li><b>Full 8x/24 bit</b> - 8x Lanczos oversampling of Sidechain signal and Input signal with 24-bit precision of output samples.</li>
+		<li><b>True Peak/16 bit</b> - Sample-rate dependent Lanczos oversampling of Sidechain signal 16-bit precision of output samples for elimination of true peaks.</li>
+		<li><b>True Peak/32 bit</b> - Sample-rate dependent Lanczos oversampling of Sidechain signal 24-bit precision of output samples for elimination of true peaks.</li>
 	</ul>
 	<li><b>Dither</b> - enables some dithering noise for the specified output amplitude quantization bitness.</li>
 	<li><b>Zoom</b> - zoom fader, allows to adjust zoom on the frequency chart.</li>

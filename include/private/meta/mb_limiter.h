@@ -84,10 +84,15 @@ namespace lsp
             static constexpr float  MAKEUP_DFL              = GAIN_AMP_0_DB;
             static constexpr float  MAKEUP_STEP             = 0.01f;
 
-            static constexpr float  KNEE_MIN                = GAIN_AMP_M_12_DB;
-            static constexpr float  KNEE_MAX                = GAIN_AMP_P_12_DB;
-            static constexpr float  KNEE_DFL                = GAIN_AMP_0_DB;
-            static constexpr float  KNEE_STEP               = 0.01f;
+            static constexpr float  KNEE_LEVEL_MIN          = GAIN_AMP_M_12_DB;
+            static constexpr float  KNEE_LEVEL_MAX          = GAIN_AMP_P_12_DB;
+            static constexpr float  KNEE_LEVEL_DFL          = GAIN_AMP_0_DB;
+            static constexpr float  KNEE_LEVEL_STEP         = 0.01f;
+
+            static constexpr float  KNEE_SMOOTH_MIN         = -48.0f;
+            static constexpr float  KNEE_SMOOTH_MAX         = 0.0f;
+            static constexpr float  KNEE_SMOOTH_DFL         = -5.0f;
+            static constexpr float  KNEE_SMOOTH_STEP        = 0.005f;
 
             static constexpr float  LINKING_MIN             = 0;
             static constexpr float  LINKING_MAX             = 100.0f;

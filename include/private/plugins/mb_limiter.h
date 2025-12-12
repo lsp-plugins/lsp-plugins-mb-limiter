@@ -100,7 +100,8 @@ namespace lsp
                     plug::IPort            *pAlrOn;             // Automatic level regulation
                     plug::IPort            *pAlrAttack;         // Automatic level regulation attack
                     plug::IPort            *pAlrRelease;        // Automatic level regulation release
-                    plug::IPort            *pAlrKnee;           // Limiter knee
+                    plug::IPort            *pAlrKneeLevel;      // Limiter knee level
+                    plug::IPort            *pAlrKneeSmooth;     // Limiter knee smoothness
 
                     plug::IPort            *pMode;              // Operating mode
                     plug::IPort            *pThresh;            // Limiter threshold

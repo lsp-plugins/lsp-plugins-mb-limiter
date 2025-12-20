@@ -300,7 +300,8 @@ namespace lsp
                 l->pAlrOn           = NULL;
                 l->pAlrAttack       = NULL;
                 l->pAlrRelease      = NULL;
-                l->pAlrKnee         = NULL;
+                l->pAlrKneeLevel    = NULL;
+                l->pAlrKneeSmooth   = NULL;
 
                 l->pMode            = NULL;
                 l->pThresh          = NULL;
@@ -397,7 +398,8 @@ namespace lsp
                     l->pAlrOn           = NULL;
                     l->pAlrAttack       = NULL;
                     l->pAlrRelease      = NULL;
-                    l->pAlrKnee         = NULL;
+                    l->pAlrKneeLevel    = NULL;
+                    l->pAlrKneeSmooth   = NULL;
 
                     l->pMode            = NULL;
                     l->pThresh          = NULL;
@@ -491,7 +493,8 @@ namespace lsp
                     l->pAlrOn           = sl->pAlrOn;
                     l->pAlrAttack       = sl->pAlrAttack;
                     l->pAlrRelease      = sl->pAlrRelease;
-                    l->pAlrKnee         = sl->pAlrKnee;
+                    l->pAlrKneeLevel    = sl->pAlrKneeLevel;
+                    l->pAlrKneeSmooth   = sl->pAlrKneeSmooth;
 
                     l->pMode            = sl->pMode;
                     l->pThresh          = sl->pThresh;
@@ -507,7 +510,8 @@ namespace lsp
                     BIND_PORT(l->pAlrOn);
                     BIND_PORT(l->pAlrAttack);
                     BIND_PORT(l->pAlrRelease);
-                    BIND_PORT(l->pAlrKnee);
+                    BIND_PORT(l->pAlrKneeLevel);
+                    BIND_PORT(l->pAlrKneeSmooth);
 
                     BIND_PORT(l->pMode);
                     BIND_PORT(l->pThresh);
@@ -559,7 +563,8 @@ namespace lsp
                         l->pAlrOn           = sl->pAlrOn;
                         l->pAlrAttack       = sl->pAlrAttack;
                         l->pAlrRelease      = sl->pAlrRelease;
-                        l->pAlrKnee         = sl->pAlrKnee;
+                        l->pAlrKneeLevel    = sl->pAlrKneeLevel;
+                        l->pAlrKneeSmooth   = sl->pAlrKneeSmooth;
 
                         l->pMode            = sl->pMode;
                         l->pThresh          = sl->pThresh;
@@ -584,7 +589,8 @@ namespace lsp
                         BIND_PORT(l->pAlrOn);
                         BIND_PORT(l->pAlrAttack);
                         BIND_PORT(l->pAlrRelease);
-                        BIND_PORT(l->pAlrKnee);
+                        BIND_PORT(l->pAlrKneeLevel);
+                        BIND_PORT(l->pAlrKneeSmooth);
 
                         BIND_PORT(l->pMode);
                         BIND_PORT(l->pThresh);
@@ -1152,7 +1158,8 @@ namespace lsp
                 l->sLimit.set_threshold(thresh, !boost);
                 l->sLimit.set_attack(l->pAttack->value());
                 l->sLimit.set_release(l->pRelease->value());
-                l->sLimit.set_knee(l->pAlrKnee->value());
+                l->sLimit.set_knee(l->pAlrKneeLevel->value());
+                l->sLimit.set_alr_knee(dspu::db_to_gain(l->pAlrKneeSmooth->value()));
                 l->sLimit.set_alr(l->pAlrOn->value() >= 0.5f);
                 l->sLimit.set_alr_attack(l->pAlrAttack->value());
                 l->sLimit.set_alr_release(l->pAlrRelease->value());
@@ -1202,7 +1209,8 @@ namespace lsp
                     l->sLimit.set_threshold(thresh, !boost);
                     l->sLimit.set_attack(l->pAttack->value());
                     l->sLimit.set_release(l->pRelease->value());
-                    l->sLimit.set_knee(l->pAlrKnee->value());
+                    l->sLimit.set_knee(l->pAlrKneeLevel->value());
+                    l->sLimit.set_alr_knee(dspu::db_to_gain(l->pAlrKneeSmooth->value()));
                     l->sLimit.set_alr(l->pAlrOn->value() >= 0.5f);
                     l->sLimit.set_alr_attack(l->pAlrAttack->value());
                     l->sLimit.set_alr_release(l->pAlrRelease->value());
@@ -2114,7 +2122,8 @@ namespace lsp
                 v->write("pAlrOn", l->pAlrOn);
                 v->write("pAlrAttack", l->pAlrAttack);
                 v->write("pAlrRelease", l->pAlrRelease);
-                v->write("pAlrKnee", l->pAlrKnee);
+                v->write("pAlrKneeLevel", l->pAlrKneeLevel);
+                v->write("pAlrKneeSmooth", l->pAlrKneeSmooth);
 
                 v->write("pMode", l->pMode);
                 v->write("pThresh", l->pThresh);

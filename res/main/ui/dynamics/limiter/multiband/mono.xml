@@ -243,7 +243,7 @@
 		<!-- Row 3: limiter bands -->
 		<cell cols="4">
 			<group text="labels.limiter_bands" ipadding="0">
-				<grid rows="27" cols="15">
+				<grid rows="27" cols="16">
 					<!-- Row 1 -->
 					<cell rows="3" cols="2">
 						<label text="labels.controls"/>
@@ -254,7 +254,7 @@
 					<cell rows="27">
 						<vsep pad.h="2" bg.color="bg" hreduce="true"/>
 					</cell>
-					<cell cols="3">
+					<cell cols="4">
 						<label text="labels.alr" pad.v="4"/>
 					</cell>
 					<cell rows="27">
@@ -265,7 +265,7 @@
 					</cell>
 
 					<!-- Row 2 -->
-					<cell cols="3">
+					<cell cols="4">
 						<hsep pad.v="2" bg.color="bg" vreduce="true"/>
 					</cell>
 					<cell cols="7">
@@ -277,6 +277,7 @@
 						<label text="labels.attack" pad.l="4"/>
 						<label text="labels.release"/>
 						<label text="labels.knee"/>
+						<label text="labels.smooth"/>
 
 						<label text="labels.preamp" pad.l="4"/>
 						<label text="labels.mode"/>
@@ -294,7 +295,7 @@
 						<cell cols="3">
 							<hsep pad.v="2" bg.color="bg" vreduce="true"/>
 						</cell>
-						<cell cols="3">
+						<cell cols="4">
 							<hsep pad.v="2" bg.color="bg" vreduce="true"/>
 						</cell>
 						<cell cols="8">
@@ -360,6 +361,7 @@
 								<knob id="aat_${i}" scolor="(!${act_ch}) ? 'cycle_inactive' : 'attack'"/>
 								<knob id="art_${i}" scolor="(!${act_ch}) ? 'cycle_inactive' : 'release_1'"/>
 								<knob id="akn_${i}" scolor="(!${act_ch}) ? 'cycle_inactive' : 'kscale'"/>
+								<knob id="asm_${i}" scolor="(!${act_ch}) ? 'cycle_inactive' : 'kscale'"/>
 
 								<knob id="bpa_${i}" scolor="(!${act_ch}) ? 'cycle_inactive' : 'kscale'"/>
 							</ui:with>
@@ -389,6 +391,7 @@
 								<value id="aat_${i}" sline="true"/>
 								<value id="art_${i}" sline="true"/>
 								<value id="akn_${i}" sline="true"/>
+								<value id="asm_${i}" sline="true"/>
 								<value id="bpa_${i}" sline="true"/>
 								<value id="th_${i}" sline="true"/>
 								<value id="at_${i}" sline="true"/>
@@ -405,7 +408,7 @@
 		<cell>
 			<ui:set id="act_alr" value=":on and :alr"/>
 			<group text="labels.output_limiter" ipadding="0">
-				<grid rows="13" cols="4" spacing="0">
+				<grid rows="14" cols="4" spacing="0">
 
 					<cell cols="4" reduce="true">
 						<button id="on" hfill="true" height="18" pad.v="4" pad.h="6" text="labels.chan.on" ui:inject="Button_cyan" bg.bright=":on ? 1.0 : :const_bg_darken" bright=":on ? 1.0: 0.75"/>
@@ -416,10 +419,10 @@
 					<cell cols="2" reduce="true">
 						<button id="alr" hfill="true" height="18" pad.v="4" pad.h="6" text="labels.alr" ui:inject="Button_yellow" bg.bright="${act_alr} ? 1.0 : :const_bg_darken" bright="${act_alr} ? 1.0: 0.75"/>
 					</cell>
-					<cell rows="12">
+					<cell rows="13">
 						<void pad.h="2" bg.color="bg" hreduce="true"/>
 					</cell>
-					<cell rows="11">
+					<cell rows="12">
 						<vbox>
 							<ui:with bg.bright=":on ? 1.0 : :const_bg_darken" bright=":on ? 1.0: 0.75">
 								<label text="labels.gain" pad.v="3"/>
@@ -444,6 +447,11 @@
 						<vbox vfill="false" pad.r="6">
 							<label text="labels.knee" halign="0"/>
 							<value id="akn" sline="true" halign="0"/>
+						</vbox>
+						<knob id="asm" scolor="${act_alr} ? 'kscale' : 'cycle_inactive'" pad.l="6" pad.r="4"/>
+						<vbox vfill="false" pad.r="6">
+							<label text="labels.smooth" halign="0"/>
+							<value id="asm" sline="true" halign="0"/>
 						</vbox>
 					</ui:with>
 

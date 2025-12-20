@@ -25,7 +25,7 @@
 
 #define LSP_PLUGINS_MB_LIMITER_VERSION_MAJOR       1
 #define LSP_PLUGINS_MB_LIMITER_VERSION_MINOR       0
-#define LSP_PLUGINS_MB_LIMITER_VERSION_MICRO       17
+#define LSP_PLUGINS_MB_LIMITER_VERSION_MICRO       18
 
 #define LSP_PLUGINS_MB_LIMITER_VERSION  \
     LSP_MODULE_VERSION( \
@@ -38,6 +38,10 @@ namespace lsp
 {
     namespace meta
     {
+        // Lisf of different revisions for adding controls
+        #define REV_0       0
+        #define REV_1       1
+
         //-------------------------------------------------------------------------
         // Plugin metadata
         static port_item_t limiter_oper_modes[] =
@@ -187,7 +191,8 @@ namespace lsp
             SWITCH("alr" id, "Automatic level regulation" label, "ALR" label, alr), \
             LOG_CONTROL("aat" id, "Automatic level regulation attack time" label, "ALR att time" alias, U_MSEC, mb_limiter::ALR_ATTACK_TIME), \
             LOG_CONTROL("art" id, "Automatic level regulation release time" label, "ALR rel time" alias, U_MSEC, mb_limiter::ALR_RELEASE_TIME), \
-            LOG_CONTROL("akn" id, "Automatic level regulation knee" label, "ALR knee" alias, U_GAIN_AMP, mb_limiter::KNEE), \
+            LOG_CONTROL("akn" id, "Automatic level regulation knee level" label, "ALR knee" alias, U_GAIN_AMP, mb_limiter::KNEE_LEVEL), \
+            ADDON_CONTROL(REV_1, "asm" id, "Automatic level regulation knee smoothness" label, "ALR smooth" alias, U_DB, mb_limiter::KNEE_SMOOTH), \
             COMBO("lm" id, "Operating mode" label, "Mode" label, mb_limiter::LOM_DEFAULT, limiter_oper_modes), \
             LOG_CONTROL("th" id, "Threshold" label, "Threshold" alias, U_GAIN_AMP, mb_limiter::THRESHOLD), \
             SWITCH("gb" id, "Gain boost" label, "Gain boost" label, 1.0f), \

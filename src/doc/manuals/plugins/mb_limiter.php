@@ -30,7 +30,8 @@ words: the more work should be done, the more CPU resources will be used. Beware
     	envelope is controlled by the <b>Attack</b> and <b>Release</b> knobs in the <b>ALR</b> section. Since 
     	different signals have different envelopes with short release time, the <b>Knee</b> knob allows to adjust 
     	the threshold of the compressor. Adjusting <b>Knee</b> may give possibility to gain some additional decibels
-    	of loudness in the final result.
+    	of loudness in the final result. The <b>Smooth</b> parameter allows to control the smoothness of the ALR gain curve.
+    	The lower value is, the smoother the ALR gain curve will be. The value of 0 dB means sharp knee.
     </li>
     <li>
         Peak cutting algorithm which searches peaks above the threshold values and applies short gain reduction patches
@@ -163,7 +164,8 @@ This introduces additional latency but gives several benefits:</li>
 	<ul>
 		<li><b>Attack</b> - the attack time of the ALR compressor.</li>
 		<li><b>Release</b> - the release time of the ALR compressor.</li>
-		<li><b>Knee</b> - the knee of the ALR compressor.</li>
+		<li><b>Knee</b> - the knee level of the ALR compressor.</li>
+		<li><b>Smooth</b> - the knee smoothness of the ALR compressor.</li>
 	</ul>
 	<li><b>Limiter</b> - limiter settings for the specific band:</li>
 	<ul>
@@ -193,7 +195,8 @@ This introduces additional latency but gives several benefits:</li>
 	<ul>
 		<li><b>Attack</b> - the attack time of the ALR compressor.</li>
 		<li><b>Release</b> - the release time of the ALR compressor.</li>
-		<li><b>Knee</b> - the knee of the ALR compressor.</li>
+		<li><b>Knee</b> - the knee level of the ALR compressor.</li>
+		<li><b>Smooth</b> - the knee smoothness of the ALR compressor.</li>
 	</ul>
 	<li><b>Lookahead</b> - the size of lookahead buffer in milliseconds. Forces the limiter to add the corresponding latency to output signal.</li>
 	<li><b>Mode</b> - the operating mode of the output limiter:</li>

@@ -4,6 +4,7 @@
 
 === 1.0.18 ===
 * Added 'smooth' parameter that allows to adjust the smoothnes of the ALR knee.
+* Updated build scripts and dependencies.
 
 === 1.0.17 ===
 * Updated build scripts and dependencies.

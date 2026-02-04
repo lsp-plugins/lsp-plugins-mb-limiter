@@ -1,6 +1,6 @@
 /*
- * Copyright (C) 2025 Linux Studio Plugins Project <https://lsp-plug.in/>
- *           (C) 2025 Vladimir Sadovnikov <sadko4u@gmail.com>
+ * Copyright (C) 2026 Linux Studio Plugins Project <https://lsp-plug.in/>
+ *           (C) 2026 Vladimir Sadovnikov <sadko4u@gmail.com>
  *
  * This file is part of lsp-plugins-mb-limiter
  * Created on: 22 июн 2023 г.
@@ -20,6 +20,7 @@
  */
 
 #include <lsp-plug.in/plug-fw/meta/ports.h>
+#include <lsp-plug.in/plug-fw/meta/registry.h>
 #include <lsp-plug.in/shared/meta/developers.h>
 #include <private/meta/mb_limiter.h>
 
@@ -412,6 +413,7 @@ namespace lsp
             mono_plugin_port_groups,
             &mb_limiter_bundle
         };
+        LSP_REGISTER_METADATA(mb_limiter_mono);
 
         const plugin_t mb_limiter_stereo =
         {
@@ -442,6 +444,7 @@ namespace lsp
             stereo_plugin_port_groups,
             &mb_limiter_bundle
         };
+        LSP_REGISTER_METADATA(mb_limiter_stereo);
 
         const plugin_t sc_mb_limiter_mono =
         {
@@ -472,6 +475,7 @@ namespace lsp
             mono_plugin_port_groups,
             &mb_limiter_bundle
         };
+        LSP_REGISTER_METADATA(sc_mb_limiter_mono);
 
         const plugin_t sc_mb_limiter_stereo =
         {
@@ -502,6 +506,7 @@ namespace lsp
             stereo_plugin_port_groups,
             &mb_limiter_bundle
         };
+        LSP_REGISTER_METADATA(sc_mb_limiter_stereo);
 
     } /* namespace meta */
 } /* namespace lsp */

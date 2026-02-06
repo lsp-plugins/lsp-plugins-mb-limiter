@@ -1,7 +1,13 @@
 {
 	"mb_limiter": {
-		"name": "Multiband Limiter",
-		"description": "Implements a multiband brick-wall limiter with flexible configuration. It prevents input signal\nfrom raising over the specified Threshold."
+		"description": "Implements a multiband brick-wall limiter with flexible configuration. It prevents input signal\nfrom raising over the specified Threshold.",
+		"name": "Multiband Limiter"
+	},
+	"launcher": {
+		"mb_limiter_mono": "Mono",
+		"mb_limiter_stereo": "Stereo",
+		"sc_mb_limiter_mono": "SC Mono",
+		"sc_mb_limiter_stereo": "SC Stereo"
 	}
 }
 

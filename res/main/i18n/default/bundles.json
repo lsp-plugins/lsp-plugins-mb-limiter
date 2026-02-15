@@ -1,6 +1,6 @@
 {
 	"mb_limiter": {
-		"description": "Implements a multiband brick-wall limiter with flexible configuration. It prevents input signal\nfrom raising over the specified Threshold.",
+		"description": "Implements a multiband brick-wall limiter with flexible configuration. It prevents\ninput signal from raising over the specified Threshold.",
 		"name": "Multiband Limiter"
 	},
 	"launcher": {

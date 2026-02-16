@@ -411,7 +411,8 @@ namespace lsp
             "plugins/dynamics/limiter/multiband/mono.xml",
             NULL,
             mono_plugin_port_groups,
-            &mb_limiter_bundle
+            &mb_limiter_bundle,
+            3
         };
         LSP_REGISTER_METADATA(mb_limiter_mono);
 
@@ -442,7 +443,8 @@ namespace lsp
             "plugins/dynamics/limiter/multiband/stereo.xml",
             NULL,
             stereo_plugin_port_groups,
-            &mb_limiter_bundle
+            &mb_limiter_bundle,
+            1
         };
         LSP_REGISTER_METADATA(mb_limiter_stereo);
 
@@ -473,7 +475,8 @@ namespace lsp
             "plugins/dynamics/limiter/multiband/mono.xml",
             NULL,
             mono_plugin_port_groups,
-            &mb_limiter_bundle
+            &mb_limiter_bundle,
+            4
         };
         LSP_REGISTER_METADATA(sc_mb_limiter_mono);
 
@@ -504,12 +507,10 @@ namespace lsp
             "plugins/dynamics/limiter/multiband/stereo.xml",
             NULL,
             stereo_plugin_port_groups,
-            &mb_limiter_bundle
+            &mb_limiter_bundle,
+            2
         };
         LSP_REGISTER_METADATA(sc_mb_limiter_stereo);
 
     } /* namespace meta */
 } /* namespace lsp */
-
-
-

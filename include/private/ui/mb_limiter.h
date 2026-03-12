@@ -1,6 +1,6 @@
 /*
- * Copyright (C) 2024 Linux Studio Plugins Project <https://lsp-plug.in/>
- *           (C) 2024 Vladimir Sadovnikov <sadko4u@gmail.com>
+ * Copyright (C) 2026 Linux Studio Plugins Project <https://lsp-plug.in/>
+ *           (C) 2026 Vladimir Sadovnikov <sadko4u@gmail.com>
  *
  * This file is part of lsp-plugins-mb-limiter
  * Created on: 6 дек. 2023 г.
@@ -71,7 +71,12 @@ namespace lsp
 
             public:
                 explicit mb_limiter_ui(const meta::plugin_t *meta);
+                mb_limiter_ui(const mb_limiter_ui &) = delete;
+                mb_limiter_ui(mb_limiter_ui &&) = delete;
                 virtual ~mb_limiter_ui() override;
+
+                mb_limiter_ui & operator = (const mb_limiter_ui &) = delete;
+                mb_limiter_ui & operator = (mb_limiter_ui &&) = delete;
 
                 virtual status_t    post_init() override;
 

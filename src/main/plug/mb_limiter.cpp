@@ -1647,14 +1647,13 @@ namespace lsp
                 }
 
                 // (In, Sc) -> Link
-                const float in2link_g   = sPremix.fInToLink * fInGain;
-                if (in2link_g > GAIN_AMP_M_INF_DB)
+                if (g_in2link > GAIN_AMP_M_INF_DB)
                 {
                     c->vShmIn           = sPremix.vTmpLink[channel];
                     if (link_buf != NULL)
-                        dsp::fmadd_k4(c->vShmIn, link_buf, in_buf, in2link_g, count);
+                        dsp::fmadd_k4(c->vShmIn, link_buf, in_buf, g_in2link, count);
                     else
-                        dsp::mul_k3(c->vShmIn, in_buf, in2link_g, count);
+                        dsp::mul_k3(c->vShmIn, in_buf, g_in2link, count);
 
                     if ((sc_buf != NULL) && (sPremix.fScToLink > GAIN_AMP_M_INF_DB))
                         dsp::fmadd_k3(c->vShmIn, sc_buf, sPremix.fScToLink, count);

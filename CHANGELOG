@@ -2,6 +2,9 @@
 * RECENT CHANGES
 *******************************************************************************
 
+=== 1.0.24 ===
+
+
 === 1.0.23 ===
 * Fixed pre-mix stage that didn't take into attention the input gain.
 * Updated build scripts and dependencies.

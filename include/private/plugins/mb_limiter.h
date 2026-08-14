@@ -244,6 +244,7 @@ namespace lsp
                 dspu::over_mode_t       decode_oversampling_mode(size_t mode);
                 void                    update_premix();
                 void                    premix_channel(uint32_t channel, size_t count);
+                void                    advance_premix(size_t count);
                 void                    output_meters();
                 void                    output_fft_curves();
                 void                    perform_analysis(size_t samples);

@@ -1,6 +1,6 @@
 /*
- * Copyright (C) 2025 Linux Studio Plugins Project <https://lsp-plug.in/>
- *           (C) 2025 Vladimir Sadovnikov <sadko4u@gmail.com>
+ * Copyright (C) 2026 Linux Studio Plugins Project <https://lsp-plug.in/>
+ *           (C) 2026 Vladimir Sadovnikov <sadko4u@gmail.com>
  *
  * This file is part of lsp-plugins-mb-limiter
  * Created on: 22 июн 2023 г.
@@ -1560,9 +1560,9 @@ namespace lsp
         {
             for (size_t i=0; i<nChannels; ++i)
             {
-                channel_t *c        = &vChannels[i];
+                channel_t * const c     = &vChannels[i];
 
-                c->sDryDelay.process(c->vInBuf, c->vIn, samples);
+                c->sDryDelay.process(c->vInBuf, sPremix.vIn[i], samples);
                 c->sBypass.process(c->vOut, c->vInBuf, c->vData, samples);
             }
         }
@@ -1581,22 +1581,23 @@ namespace lsp
             c->vSc                  = sc_buf;
             c->vShmIn               = link_buf;
 
-            // Update pointers
-            sPremix.vIn[channel]   += count;
-            sPremix.vOut[channel]  += count;
-            if (sPremix.vSc[channel] != NULL)
-                sPremix.vSc[channel]   += count;
-            if (sPremix.vLink[channel] != NULL)
-                sPremix.vLink[channel] += count;
-
             // Perform transformation
+            const float g_in2link   = sPremix.fInToLink * fInGain;
+
             if (bSidechain)
             {
+                const float g_in2sc     = sPremix.fInToSc * fInGain;
+
                 // (Sc, Link) -> In
                 if ((sc_buf != NULL) && (sPremix.fScToIn > GAIN_AMP_M_INF_DB))
                 {
                     c->vIn              = sPremix.vTmpIn[channel];
-                    dsp::fmadd_k4(c->vIn, in_buf, sc_buf, sPremix.fScToIn, count);
+                    if (fInGain <= GAIN_AMP_M_INF_DB)
+                        dsp::mul_k3(c->vIn, sc_buf, sPremix.fScToIn, count);
+                    else if (fInGain != GAIN_AMP_0_DB)
+                        dsp::mix_copy2(c->vIn, in_buf, sc_buf, fInGain, sPremix.fScToIn, count);
+                    else
+                        dsp::fmadd_k4(c->vIn, in_buf, sc_buf, sPremix.fScToIn, count);
 
                     if ((link_buf != NULL) && (sPremix.fLinkToIn > GAIN_AMP_M_INF_DB))
                         dsp::fmadd_k3(c->vIn, link_buf, sPremix.fLinkToIn, count);
@@ -1604,17 +1605,29 @@ namespace lsp
                 else if ((link_buf != NULL) && (sPremix.fLinkToIn > GAIN_AMP_M_INF_DB))
                 {
                     c->vIn              = sPremix.vTmpIn[channel];
-                    dsp::fmadd_k4(c->vIn, in_buf, link_buf, sPremix.fLinkToIn, count);
+                    if (fInGain <= GAIN_AMP_M_INF_DB)
+                        dsp::mul_k3(c->vIn, link_buf, sPremix.fLinkToIn, count);
+                    else if (fInGain != GAIN_AMP_0_DB)
+                        dsp::mix_copy2(c->vIn, in_buf, link_buf, fInGain, sPremix.fLinkToIn, count);
+                    else
+                        dsp::fmadd_k4(c->vIn, in_buf, link_buf, sPremix.fLinkToIn, count);
+                }
+                else if (fInGain != GAIN_AMP_0_DB)
+                {
+                    c->vIn              = sPremix.vTmpIn[channel];
+                    dsp::mul_k3(c->vIn, in_buf, fInGain, count);
                 }
 
                 // (In, Link) -> Sc
-                if (sPremix.fInToSc > GAIN_AMP_M_INF_DB)
+                if (g_in2sc > GAIN_AMP_M_INF_DB)
                 {
                     c->vSc              = sPremix.vTmpSc[channel];
                     if (sc_buf != NULL)
-                        dsp::fmadd_k4(c->vSc, sc_buf, in_buf, sPremix.fInToSc, count);
+                        dsp::fmadd_k4(c->vSc, sc_buf, in_buf, g_in2sc, count);
+                    else if (g_in2sc != GAIN_AMP_0_DB)
+                        dsp::mul_k3(c->vSc, in_buf, g_in2sc, count);
                     else
-                        dsp::mul_k3(c->vSc, in_buf, sPremix.fInToSc, count);
+                        dsp::copy(c->vSc, in_buf, count);
 
                     if ((link_buf != NULL) && (sPremix.fLinkToSc > GAIN_AMP_M_INF_DB))
                         dsp::fmadd_k3(c->vSc, link_buf, sPremix.fLinkToSc, count);
@@ -1627,15 +1640,20 @@ namespace lsp
                     else
                         dsp::mul_k3(c->vSc, link_buf, sPremix.fLinkToSc, count);
                 }
+                else if (sc_buf == NULL)
+                {
+                    c->vSc          = sPremix.vTmpSc[channel];
+                    dsp::fill_zero(c->vSc, count);
+                }
 
                 // (In, Sc) -> Link
-                if (sPremix.fInToLink > GAIN_AMP_M_INF_DB)
+                if (g_in2link > GAIN_AMP_M_INF_DB)
                 {
                     c->vShmIn           = sPremix.vTmpLink[channel];
                     if (link_buf != NULL)
-                        dsp::fmadd_k4(c->vShmIn, link_buf, in_buf, sPremix.fInToLink, count);
+                        dsp::fmadd_k4(c->vShmIn, link_buf, in_buf, g_in2link, count);
                     else
-                        dsp::mul_k3(c->vShmIn, in_buf, sPremix.fInToLink, count);
+                        dsp::mul_k3(c->vShmIn, in_buf, g_in2link, count);
 
                     if ((sc_buf != NULL) && (sPremix.fScToLink > GAIN_AMP_M_INF_DB))
                         dsp::fmadd_k3(c->vShmIn, sc_buf, sPremix.fScToLink, count);
@@ -1651,35 +1669,67 @@ namespace lsp
             }
             else
             {
-                // Link -> (In, Sc)
-                if (link_buf != NULL)
+                // Link -> In
+                if ((link_buf != NULL) && (sPremix.fLinkToIn > GAIN_AMP_M_INF_DB))
                 {
-                    // Link -> In
-                    if (sPremix.fLinkToIn > GAIN_AMP_M_INF_DB)
-                    {
-                        c->vIn          = sPremix.vTmpIn[channel];
+                    c->vIn          = sPremix.vTmpIn[channel];
+                    if (fInGain != GAIN_AMP_0_DB)
+                        dsp::mix_copy2(c->vIn, in_buf, link_buf, fInGain, sPremix.fLinkToIn, count);
+                    else
                         dsp::fmadd_k4(c->vIn, in_buf, link_buf, sPremix.fLinkToIn, count);
-                    }
-                    // Link -> Sc
-                    if (sPremix.fLinkToSc > GAIN_AMP_M_INF_DB)
-                    {
-                        c->vSc          = sPremix.vTmpSc[channel];
-                        if (sc_buf != NULL)
-                            dsp::fmadd_k4(c->vSc, sc_buf, link_buf, sPremix.fLinkToSc, count);
-                        else
-                            dsp::mul_k3(c->vSc, link_buf, sPremix.fLinkToSc, count);
-                    }
+                }
+                else if (fInGain != GAIN_AMP_0_DB)
+                {
+                    c->vIn          = sPremix.vTmpIn[channel];
+                    dsp::mul_k3(c->vIn, in_buf, fInGain, count);
+                }
+
+                // Link -> Sc
+                if ((link_buf != NULL) && (sPremix.fLinkToSc > GAIN_AMP_M_INF_DB))
+                {
+                    c->vSc          = sPremix.vTmpSc[channel];
+                    if (sc_buf != NULL)
+                        dsp::fmadd_k4(c->vSc, sc_buf, link_buf, sPremix.fLinkToSc, count);
+                    else if (fInGain <= GAIN_AMP_M_INF_DB)
+                        dsp::mul_k3(c->vSc, link_buf, sPremix.fLinkToSc, count);
+                    else if (fInGain != GAIN_AMP_0_DB)
+                        dsp::mix_copy2(c->vSc, in_buf, link_buf, fInGain, sPremix.fLinkToSc, count);
+                    else
+                        dsp::fmadd_k4(c->vSc, in_buf, link_buf, sPremix.fLinkToSc, count);
+                }
+                else if (sc_buf == NULL)
+                {
+                    c->vSc          = sPremix.vTmpSc[channel];
+                    if (fInGain > GAIN_AMP_M_INF_DB)
+                        dsp::mul_k3(c->vSc, in_buf, fInGain, count);
+                    else
+                        dsp::fill_zero(c->vSc, count);
                 }
 
                 // In -> Link
-                if (sPremix.fInToLink > GAIN_AMP_M_INF_DB)
+                if (g_in2link > GAIN_AMP_M_INF_DB)
                 {
                     c->vShmIn       = sPremix.vTmpLink[channel];
+
                     if (link_buf != NULL)
-                        dsp::fmadd_k4(c->vShmIn, link_buf, in_buf, sPremix.fInToLink, count);
+                        dsp::fmadd_k4(c->vShmIn, link_buf, in_buf, g_in2link, count);
                     else
-                        dsp::mul_k3(c->vShmIn, in_buf, sPremix.fInToLink, count);
+                        dsp::mul_k3(c->vShmIn, in_buf, g_in2link, count);
                 }
+            }
+        }
+
+        void mb_limiter::advance_premix(size_t count)
+        {
+            // Update pointers
+            for (size_t i=0; i<nChannels; ++i)
+            {
+                sPremix.vIn[i]     += count;
+                sPremix.vOut[i]    += count;
+                if (sPremix.vSc[i] != NULL)
+                    sPremix.vSc[i]     += count;
+                if (sPremix.vLink[i] != NULL)
+                    sPremix.vLink[i]   += count;
             }
         }
 
@@ -1688,14 +1738,14 @@ namespace lsp
             // Bind input signal
             for (size_t i=0; i<nChannels; ++i)
             {
-                channel_t *c        = &vChannels[i];
+                channel_t * const c = &vChannels[i];
 
                 sPremix.vIn[i]      = c->pIn->buffer<float>();
                 sPremix.vOut[i]     = c->pOut->buffer<float>();
-                sPremix.vSc[i]      = (c->pSc != NULL) ? c->pSc->buffer<float>() : sPremix.vIn[i];
+                sPremix.vSc[i]      = (c->pSc != NULL) ? c->pSc->buffer<float>() : NULL;
                 sPremix.vLink[i]    = NULL;
 
-                core::AudioBuffer *shm_buf  = (c->pShmIn != NULL) ? c->pShmIn->buffer<core::AudioBuffer>() : NULL;
+                core::AudioBuffer * const shm_buf   = (c->pShmIn != NULL) ? c->pShmIn->buffer<core::AudioBuffer>() : NULL;
                 if ((shm_buf != NULL) && (shm_buf->active()))
                     sPremix.vLink[i]    = shm_buf->buffer();
 
@@ -1740,8 +1790,9 @@ namespace lsp
                 output_audio(count);
                 perform_analysis(count);
 
-                // Update pointers
-                offset += count;
+                // Update pointers and offsets
+                advance_premix(count);
+                offset     += count;
             }
 
             // Output FFT graphs to the UI
@@ -1762,14 +1813,8 @@ namespace lsp
             // Apply input gain if needed
             for (size_t i=0; i<nChannels; ++i)
             {
-                channel_t *c        = &vChannels[i];
-                if (fInGain != GAIN_AMP_0_DB)
-                {
-                    dsp::mul_k3(c->vData, c->vIn, fInGain, samples);
-                    c->sOver.upsample(c->vInBuf, c->vData, samples);
-                }
-                else
-                    c->sOver.upsample(c->vInBuf, c->vIn, samples);
+                channel_t * const c     = &vChannels[i];
+                c->sOver.upsample(c->vInBuf, c->vIn, samples);
 
                 // Process sidechain signal and apply boosting
                 switch (nScMode)
@@ -1832,7 +1877,7 @@ namespace lsp
                 bufs[c->nAnOutChannel]  = c->vData;
 
                 c->pOutMeter->set_value(dsp::abs_max(c->vData, samples));
-                c->pInMeter->set_value(dsp::abs_max(c->vInBuf, samples) * fInGain);
+                c->pInMeter->set_value(dsp::abs_max(c->vInBuf, samples));
             }
 
             // Perform processing
@@ -1959,7 +2004,6 @@ namespace lsp
                         // Copy frequency points
                         dsp::copy(&mesh->pvData[0][1], vFreqs, meta::mb_limiter::FFT_MESH_POINTS);
                         sAnalyzer.get_spectrum(c->nAnInChannel, &mesh->pvData[1][1], vIndexes, meta::mb_limiter::FFT_MESH_POINTS);
-                        dsp::mul_k2(&mesh->pvData[1][1], fInGain, meta::mb_limiter::FFT_MESH_POINTS);
 
                         // Mark mesh containing data
                         mesh->data(2, meta::mb_limiter::FFT_MESH_POINTS + 2);

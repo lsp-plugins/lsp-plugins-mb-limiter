@@ -933,7 +933,6 @@ namespace lsp
 
             // Determine number of channels
             bool rebuild_bands          = nPlanSize <= 0;
-            int active_channels         = 0;
             size_t env_boost            = pEnvBoost->value();
 
             // Check that real sample rate has changed
@@ -1063,11 +1062,6 @@ namespace lsp
                 sAnalyzer.enable_channel(c->nAnInChannel, c->bFftIn);
                 sAnalyzer.enable_channel(c->nAnOutChannel, c->bFftOut);
 
-                if (sAnalyzer.channel_active(c->nAnInChannel))
-                    active_channels ++;
-                if (sAnalyzer.channel_active(c->nAnOutChannel))
-                    active_channels ++;
-
                 // Update envelope boost filters
                 if ((env_boost != nEnvBoost) || (bEnvUpdate))
                 {
@@ -1113,7 +1107,6 @@ namespace lsp
             sAnalyzer.set_reactivity(pReactivity->value());
             if (pShift != NULL)
                 sAnalyzer.set_shift(pShift->value() * 100.0f);
-            sAnalyzer.set_activity(active_channels > 0);
 
             // Update analyzer
             if (sAnalyzer.needs_reconfiguration())
@@ -2043,17 +2036,24 @@ namespace lsp
 
         void mb_limiter::ui_activated()
         {
+            sAnalyzer.set_activity(true);
+
             // Force meshes with the UI to synchronized
             for (size_t i=0; i<nChannels; ++i)
             {
-                channel_t *c        = &vChannels[i];
+                channel_t * const c = &vChannels[i];
 
                 for (size_t j=0; j<meta::mb_limiter::BANDS_MAX; ++j)
                 {
-                    band_t *b           = &c->vBands[j];
+                    band_t * const b    = &c->vBands[j];
                     b->bSync            = true;
                 }
             }
+        }
+
+        void mb_limiter::ui_deactivated()
+        {
+            sAnalyzer.set_activity(false);
         }
 
         bool mb_limiter::inline_display(plug::ICanvas *cv, size_t width, size_t height)

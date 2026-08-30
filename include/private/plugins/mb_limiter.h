@@ -1,6 +1,6 @@
 /*
- * Copyright (C) 2025 Linux Studio Plugins Project <https://lsp-plug.in/>
- *           (C) 2025 Vladimir Sadovnikov <sadko4u@gmail.com>
+ * Copyright (C) 2026 Linux Studio Plugins Project <https://lsp-plug.in/>
+ *           (C) 2026 Vladimir Sadovnikov <sadko4u@gmail.com>
  *
  * This file is part of lsp-plugins-mb-limiter
  * Created on: 22 июн 2023 г.
@@ -289,6 +289,7 @@ namespace lsp
                 virtual void            update_settings() override;
                 virtual void            process(size_t samples) override;
                 virtual void            ui_activated() override;
+                virtual void            ui_deactivated() override;
                 virtual bool            inline_display(plug::ICanvas *cv, size_t width, size_t height) override;
                 virtual void            dump(dspu::IStateDumper *v) const override;
         };

@@ -30,7 +30,7 @@
 #include <lsp-plug.in/dsp-units/util/Analyzer.h>
 #include <lsp-plug.in/dsp-units/util/Delay.h>
 #include <lsp-plug.in/dsp-units/util/Dither.h>
-#include <lsp-plug.in/dsp-units/util/FFTCrossover.h>
+#include <lsp-plug.in/dsp-units/util/LPCrossover.h>
 #include <lsp-plug.in/dsp-units/util/Oversampler.h>
 #include <lsp-plug.in/plug-fw/core/IDBuffer.h>
 #include <lsp-plug.in/plug-fw/plug.h>
@@ -154,8 +154,8 @@ namespace lsp
                 typedef struct channel_t
                 {
                     dspu::Bypass            sBypass;            // Bypass
-                    dspu::FFTCrossover      sFFTXOver;          // FFT crossover
-                    dspu::FFTCrossover      sFFTScXOver;        // FFT crossover for sidechain
+                    dspu::LPCrossover       sLPXOver;           // FFT crossover
+                    dspu::LPCrossover       sLPScXOver;         // FFT crossover for sidechain
                     dspu::Dither            sDither;            // Dither
                     dspu::Oversampler       sOver;              // Oversampler object for signal
                     dspu::Oversampler       sScOver;            // Sidechain oversampler object for signal

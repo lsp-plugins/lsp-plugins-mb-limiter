@@ -28,6 +28,7 @@
 #include <lsp-plug.in/dsp-units/filters/DynamicFilters.h>
 #include <lsp-plug.in/dsp-units/filters/Equalizer.h>
 #include <lsp-plug.in/dsp-units/util/Analyzer.h>
+#include <lsp-plug.in/dsp-units/util/Crossover.h>
 #include <lsp-plug.in/dsp-units/util/Delay.h>
 #include <lsp-plug.in/dsp-units/util/Dither.h>
 #include <lsp-plug.in/dsp-units/util/LPCrossover.h>
@@ -115,11 +116,6 @@ namespace lsp
 
                 typedef struct band_t
                 {
-                    dspu::Equalizer         sEq;                // Sidechain equalizer
-                    dspu::Filter            sPassFilter;        // Passing filter for 'classic' mode
-                    dspu::Filter            sRejFilter;         // Rejection filter for 'classic' mode
-                    dspu::Filter            sAllFilter;         // All-pass filter for phase compensation
-
                     limiter_t               sLimiter;           // Limiter
 
                     bool                    bSync;              // Synchronization request
@@ -154,8 +150,10 @@ namespace lsp
                 typedef struct channel_t
                 {
                     dspu::Bypass            sBypass;            // Bypass
-                    dspu::LPCrossover       sLPXOver;           // FFT crossover
-                    dspu::LPCrossover       sLPScXOver;         // FFT crossover for sidechain
+                    dspu::Crossover         sXOver;             // Classic crossover
+                    dspu::Crossover         sScXOver;           // Classic crossover for sidechain
+                    dspu::LPCrossover       sLPXOver;           // Linear phase crossover
+                    dspu::LPCrossover       sLPScXOver;         // Linear phase crossover for sidechain
                     dspu::Dither            sDither;            // Dither
                     dspu::Oversampler       sOver;              // Oversampler object for signal
                     dspu::Oversampler       sScOver;            // Sidechain oversampler object for signal
@@ -217,8 +215,6 @@ namespace lsp
                 uint32_t               *vIndexes;           // Analyzer FFT indexes
                 float                  *vFreqs;             // Analyzer FFT frequencies
                 float                  *vTr;                // Buffer for computing transfer function
-                float                  *vTrTmp;             // Temporary buffer for computing transfer function
-                float                  *vFc;                // Filter characteristics
                 core::IDBuffer         *pIDisplay;          // Inline display buffer
 
                 split_t                 vSplits[meta::mb_limiter::BANDS_MAX-1];     // Frequency splits

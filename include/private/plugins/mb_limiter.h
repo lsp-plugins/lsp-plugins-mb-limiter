@@ -128,7 +128,7 @@ namespace lsp
                     float                   fMakeup;            // Makeup gain
 
                     float                  *vDataBuf;           // Data buffer
-                    float                  *vTrOut;             // Transfer function output
+                    float                  *vTr;                // Transfer function output
 
                     plug::IPort            *pFreqEnd;           // Frequency range end
                     plug::IPort            *pSolo;              // Solo switch
@@ -214,7 +214,6 @@ namespace lsp
                 float                  *vEnvBuf;            // Temporary envelope buffer
                 uint32_t               *vIndexes;           // Analyzer FFT indexes
                 float                  *vFreqs;             // Analyzer FFT frequencies
-                float                  *vTr;                // Buffer for computing transfer function
                 core::IDBuffer         *pIDisplay;          // Inline display buffer
 
                 split_t                 vSplits[meta::mb_limiter::BANDS_MAX-1];     // Frequency splits

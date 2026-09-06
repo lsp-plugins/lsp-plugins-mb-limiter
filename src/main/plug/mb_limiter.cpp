@@ -131,7 +131,6 @@ namespace lsp
             vEnvBuf             = NULL;
             vFreqs              = NULL;
             vIndexes            = NULL;
-            vTr                 = NULL;
             pIDisplay           = NULL;
 
             for (size_t i=0; i<(meta::mb_limiter::BANDS_MAX-1); ++i)
@@ -181,13 +180,13 @@ namespace lsp
             const size_t szof_fft_graph = meta::mb_limiter::FFT_MESH_POINTS * sizeof(float);
             const size_t szof_buf       = BUFFER_SIZE * sizeof(float);
             const size_t szof_ovs_buf   = szof_buf * meta::mb_limiter::OVERSAMPLING_MAX;
+            const size_t szof_tmp_buf   = lsp_max(szof_ovs_buf, szof_fft_graph * 2);
             const size_t to_alloc       =
                 szof_channels +                 // vChannels
-                szof_ovs_buf +                  // vTmpBuf
+                szof_tmp_buf +                  // vTmpBuf
                 szof_ovs_buf +                  // vEnvBuf
                 szof_fft_graph +                // vFreqs
                 szof_indexes +                  // vIndexes
-                szof_fft_graph * 2 +            // vTr
                 nChannels * (
                     szof_buf*3 +                // sPremix
                     szof_buf +                  // vData
@@ -198,7 +197,7 @@ namespace lsp
                     szof_ovs_buf +              // vVcaBuf
                     meta::mb_limiter::BANDS_MAX * (
                         szof_ovs_buf +          // vDataBuf
-                        szof_fft_graph +        // vTrOut
+                        szof_fft_graph*2 +      // vTrOut
                         szof_ovs_buf            // vVcaBuf
                     )
                 );
@@ -223,11 +222,10 @@ namespace lsp
 
             // Allocate objects
             vChannels               = advance_ptr_bytes<channel_t>(ptr, szof_channels);
-            vTmpBuf                 = advance_ptr_bytes<float>(ptr, szof_ovs_buf);
+            vTmpBuf                 = advance_ptr_bytes<float>(ptr, szof_tmp_buf);
             vEnvBuf                 = advance_ptr_bytes<float>(ptr, szof_ovs_buf);
             vFreqs                  = advance_ptr_bytes<float>(ptr, szof_fft_graph);
             vIndexes                = advance_ptr_bytes<uint32_t>(ptr, szof_indexes);
-            vTr                     = advance_ptr_bytes<float>(ptr, szof_fft_graph * 2);
 
             // Initialize pre-mix
             for (size_t i=0; i<nChannels; ++i)
@@ -360,7 +358,7 @@ namespace lsp
                     b->fMakeup          = GAIN_AMP_0_DB;
 
                     b->vDataBuf         = advance_ptr_bytes<float>(ptr, szof_ovs_buf);
-                    b->vTrOut           = advance_ptr_bytes<float>(ptr, szof_fft_graph);
+                    b->vTr              = advance_ptr_bytes<float>(ptr, szof_fft_graph*2);
 
                     b->pFreqEnd         = NULL;
                     b->pSolo            = NULL;
@@ -1243,10 +1241,7 @@ namespace lsp
                             for (size_t j=0; j < meta::mb_limiter::BANDS_MAX; ++j)
                             {
                                 band_t * const b = &c->vBands[j];
-
-                                // Update transfer function
-                                c->sXOver.freq_chart(j, vTr, vFreqs, meta::mb_limiter::FFT_MESH_POINTS);
-                                dsp::pcomplex_mod(b->vTrOut, vTr, meta::mb_limiter::FFT_MESH_POINTS);
+                                c->sXOver.freq_chart(j, b->vTr, vFreqs, meta::mb_limiter::FFT_MESH_POINTS);
                             }
                         }
                     }
@@ -1275,10 +1270,7 @@ namespace lsp
                             for (size_t j=0; j < meta::mb_limiter::BANDS_MAX; ++j)
                             {
                                 band_t * const b = &c->vBands[j];
-
-                                // Update transfer function
-                                c->sLPXOver.freq_chart(j, vTr, vFreqs, meta::mb_limiter::FFT_MESH_POINTS);
-                                dsp::copy(b->vTrOut, vTr, meta::mb_limiter::FFT_MESH_POINTS);
+                                c->sLPXOver.freq_chart(j, b->vTr, vFreqs, meta::mb_limiter::FFT_MESH_POINTS);
                             }
                         }
                     }
@@ -1296,15 +1288,15 @@ namespace lsp
 
             for (size_t i=0; i<nChannels; ++i)
             {
-                channel_t *c            = &vChannels[i];
+                channel_t * const c     = &vChannels[i];
                 c->sDryDelay.set_delay(latency + xover_latency);
             }
         }
 
         void mb_limiter::process_band(void *object, void *subject, size_t band, const float *data, size_t sample, size_t count)
         {
-            channel_t *c            = static_cast<channel_t *>(subject);
-            band_t *b               = &c->vBands[band];
+            channel_t * const c     = static_cast<channel_t *>(subject);
+            band_t * const b        = &c->vBands[band];
 
             // Store data to band's buffer
             dsp::copy(&b->vDataBuf[sample], data, count);
@@ -1312,8 +1304,8 @@ namespace lsp
 
         void mb_limiter::process_sc_band(void *object, void *subject, size_t band, const float *data, size_t sample, size_t count)
         {
-            channel_t *c            = static_cast<channel_t *>(subject);
-            band_t *b               = &c->vBands[band];
+            channel_t * const c     = static_cast<channel_t *>(subject);
+            band_t * const b        = &c->vBands[band];
 
             // Store data to band's buffer
             dsp::mul_k3(&b->sLimiter.vVcaBuf[sample], data, b->fPreamp, count);
@@ -1857,7 +1849,13 @@ namespace lsp
 
                         // Fill mesh
                         dsp::copy(&mesh->pvData[0][1], vFreqs, meta::mb_limiter::FFT_MESH_POINTS);
-                        dsp::mul_k3(&mesh->pvData[1][1], b->vTrOut, b->fPreamp, meta::mb_limiter::FFT_MESH_POINTS);
+                        if (nMode == XOVER_CLASSIC)
+                        {
+                            dsp::pcomplex_mod(vTmpBuf, b->vTr, meta::mb_limiter::FFT_MESH_POINTS);
+                            dsp::mul_k3(&mesh->pvData[1][1], vTmpBuf, b->fPreamp, meta::mb_limiter::FFT_MESH_POINTS);
+                        }
+                        else
+                            dsp::mul_k3(&mesh->pvData[1][1], b->vTr, b->fPreamp, meta::mb_limiter::FFT_MESH_POINTS);
                         mesh->data(2, meta::mb_limiter::FFT_MESH_POINTS + 2);
 
                         // Mark mesh as synchronized
@@ -1874,15 +1872,32 @@ namespace lsp
                 // Calculate transfer function
                 if (sCounter.fired())
                 {
-                    for (size_t j=0; j<nPlanSize; ++j)
+                    if (nMode == XOVER_CLASSIC)
                     {
-                        band_t * const b    = c->vPlan[j];
-                        if (j == 0)
-                            dsp::mul_k3(vTr, b->vTrOut, b->sLimiter.fReductionLevel * b->fMakeup, meta::mb_limiter::FFT_MESH_POINTS);
-                        else
-                            dsp::fmadd_k3(vTr, b->vTrOut, b->sLimiter.fReductionLevel * b->fMakeup, meta::mb_limiter::FFT_MESH_POINTS);
+                        for (size_t j=0; j<nPlanSize; ++j)
+                        {
+                            band_t * const b    = c->vPlan[j];
+                            const float gain    = b->sLimiter.fReductionLevel * b->fMakeup;
+                            if (j == 0)
+                                dsp::mul_k3(vTmpBuf, b->vTr, gain, meta::mb_limiter::FFT_MESH_POINTS * 2);
+                            else
+                                dsp::fmadd_k3(vTmpBuf, b->vTr, gain, meta::mb_limiter::FFT_MESH_POINTS * 2);
+                        }
+                        dsp::pcomplex_mod(c->vTrOut, vTmpBuf, meta::mb_limiter::FFT_MESH_POINTS);
                     }
-                    dsp::copy(c->vTrOut, vTr, meta::mb_limiter::FFT_MESH_POINTS);
+                    else
+                    {
+                        for (size_t j=0; j<nPlanSize; ++j)
+                        {
+                            band_t * const b    = c->vPlan[j];
+                            const float gain    = b->sLimiter.fReductionLevel * b->fMakeup;
+                            if (j == 0)
+                                dsp::mul_k3(vTmpBuf, b->vTr, gain, meta::mb_limiter::FFT_MESH_POINTS);
+                            else
+                                dsp::fmadd_k3(vTmpBuf, b->vTr, gain, meta::mb_limiter::FFT_MESH_POINTS);
+                        }
+                        dsp::copy(c->vTrOut, vTmpBuf, meta::mb_limiter::FFT_MESH_POINTS);
+                    }
                 }
 
                 // Output FFT curve for input
@@ -2029,11 +2044,11 @@ namespace lsp
 
             for (size_t i=0; i<nChannels; ++i)
             {
-                channel_t *c    = &vChannels[i];
+                channel_t * const c = &vChannels[i];
 
                 for (size_t j=0; j<width; ++j)
                 {
-                    size_t k        = (j*meta::mb_limiter::FFT_MESH_POINTS)/width;
+                    const size_t k  = (j*meta::mb_limiter::FFT_MESH_POINTS)/width;
                     b->v[0][j+1]    = vFreqs[k];
                     b->v[3][j+1]    = c->vTrOut[k];
                 }
@@ -2164,7 +2179,7 @@ namespace lsp
                                 v->write("fMakeup", b->fMakeup);
 
                                 v->write("vDataBuf", b->vDataBuf);
-                                v->write("vTrOut", b->vTrOut);
+                                v->write("vTr", b->vTr);
 
                                 v->write("pFreqEnd", b->pFreqEnd);
                                 v->write("pSolo", b->pSolo);
@@ -2214,7 +2229,6 @@ namespace lsp
             v->write("vEnvBuf", vEnvBuf);
             v->write("vIndexes", vIndexes);
             v->write("vFreqs", vFreqs);
-            v->write("vTr", vTr);
             v->write("pIDisplay", pIDisplay);
 
             v->begin_array("vSplits", vSplits, meta::mb_limiter::BANDS_MAX-1);

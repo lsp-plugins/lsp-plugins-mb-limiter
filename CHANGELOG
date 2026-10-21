@@ -4,6 +4,7 @@
 
 === 1.0.25 ===
 * Optimized CPU consumption: FFT analysis is not performed when UI is not active.
+* Updated build scripts and dependencies.
 
 === 1.0.24 ===
 * Updated build scripts and dependencies.

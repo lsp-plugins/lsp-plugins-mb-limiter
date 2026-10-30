@@ -1,6 +1,6 @@
 /*
- * Copyright (C) 2025 Linux Studio Plugins Project <https://lsp-plug.in/>
- *           (C) 2025 Vladimir Sadovnikov <sadko4u@gmail.com>
+ * Copyright (C) 2026 Linux Studio Plugins Project <https://lsp-plug.in/>
+ *           (C) 2026 Vladimir Sadovnikov <sadko4u@gmail.com>
  *
  * This file is part of lsp-plugins-mb-limiter
  * Created on: 22 июн 2023 г.
@@ -28,9 +28,10 @@
 #include <lsp-plug.in/dsp-units/filters/DynamicFilters.h>
 #include <lsp-plug.in/dsp-units/filters/Equalizer.h>
 #include <lsp-plug.in/dsp-units/util/Analyzer.h>
+#include <lsp-plug.in/dsp-units/util/Crossover.h>
 #include <lsp-plug.in/dsp-units/util/Delay.h>
 #include <lsp-plug.in/dsp-units/util/Dither.h>
-#include <lsp-plug.in/dsp-units/util/FFTCrossover.h>
+#include <lsp-plug.in/dsp-units/util/LPCrossover.h>
 #include <lsp-plug.in/dsp-units/util/Oversampler.h>
 #include <lsp-plug.in/plug-fw/core/IDBuffer.h>
 #include <lsp-plug.in/plug-fw/plug.h>
@@ -115,11 +116,6 @@ namespace lsp
 
                 typedef struct band_t
                 {
-                    dspu::Equalizer         sEq;                // Sidechain equalizer
-                    dspu::Filter            sPassFilter;        // Passing filter for 'classic' mode
-                    dspu::Filter            sRejFilter;         // Rejection filter for 'classic' mode
-                    dspu::Filter            sAllFilter;         // All-pass filter for phase compensation
-
                     limiter_t               sLimiter;           // Limiter
 
                     bool                    bSync;              // Synchronization request
@@ -132,7 +128,7 @@ namespace lsp
                     float                   fMakeup;            // Makeup gain
 
                     float                  *vDataBuf;           // Data buffer
-                    float                  *vTrOut;             // Transfer function output
+                    float                  *vTr;                // Transfer function output
 
                     plug::IPort            *pFreqEnd;           // Frequency range end
                     plug::IPort            *pSolo;              // Solo switch
@@ -154,8 +150,10 @@ namespace lsp
                 typedef struct channel_t
                 {
                     dspu::Bypass            sBypass;            // Bypass
-                    dspu::FFTCrossover      sFFTXOver;          // FFT crossover
-                    dspu::FFTCrossover      sFFTScXOver;        // FFT crossover for sidechain
+                    dspu::Crossover         sXOver;             // Classic crossover
+                    dspu::Crossover         sScXOver;           // Classic crossover for sidechain
+                    dspu::LPCrossover       sLPXOver;           // Linear phase crossover
+                    dspu::LPCrossover       sLPScXOver;         // Linear phase crossover for sidechain
                     dspu::Dither            sDither;            // Dither
                     dspu::Oversampler       sOver;              // Oversampler object for signal
                     dspu::Oversampler       sScOver;            // Sidechain oversampler object for signal
@@ -216,9 +214,6 @@ namespace lsp
                 float                  *vEnvBuf;            // Temporary envelope buffer
                 uint32_t               *vIndexes;           // Analyzer FFT indexes
                 float                  *vFreqs;             // Analyzer FFT frequencies
-                float                  *vTr;                // Buffer for computing transfer function
-                float                  *vTrTmp;             // Temporary buffer for computing transfer function
-                float                  *vFc;                // Filter characteristics
                 core::IDBuffer         *pIDisplay;          // Inline display buffer
 
                 split_t                 vSplits[meta::mb_limiter::BANDS_MAX-1];     // Frequency splits
@@ -289,6 +284,7 @@ namespace lsp
                 virtual void            update_settings() override;
                 virtual void            process(size_t samples) override;
                 virtual void            ui_activated() override;
+                virtual void            ui_deactivated() override;
                 virtual bool            inline_display(plug::ICanvas *cv, size_t width, size_t height) override;
                 virtual void            dump(dspu::IStateDumper *v) const override;
         };

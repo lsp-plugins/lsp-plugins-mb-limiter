@@ -263,10 +263,7 @@ namespace lsp
                 if (!c->sScXOver.init(meta::mb_limiter::BANDS_MAX, BUFFER_SIZE * meta::mb_limiter::OVERSAMPLING_MAX))
                     return;
                 for (size_t j=0; j<meta::mb_limiter::BANDS_MAX; ++j)
-                {
-                    c->sXOver.set_handler(j, process_band, this, c);
                     c->sScXOver.set_handler(j, process_sc_band, this, c);
-                }
 
                 if (!c->sScBoost.init(NULL))
                     return;
@@ -676,12 +673,19 @@ namespace lsp
             {
                 channel_t * const c = &vChannels[i];
 
-                size_t max_lat      = dspu::millis_to_samples(MAX_SAMPLE_RATE, lk_latency*2 + c->sOver.max_latency()) + bins;
+                const size_t max_lat    = dspu::millis_to_samples(MAX_SAMPLE_RATE, lk_latency*2 + c->sOver.max_latency()) + bins;
 
                 c->sBypass.init(sr);
                 c->sOver.set_sample_rate(sr);
                 c->sScBoost.set_sample_rate(sr);
                 c->sDryDelay.init(max_lat);
+
+                // Bid buffers for IIR crossover
+                for (size_t j=0; j<meta::mb_limiter::BANDS_MAX; ++j)
+                {
+                    band_t * const b    = &c->vBands[j];
+                    c->sXOver.bind_buffer(j, b->vDataBuf);          // Bind buffer to store channel data
+                }
 
                 // Need to re-initialize FFT crossovers?
                 if (fft_rank != c->sLPXOver.rank())

@@ -3,6 +3,7 @@
 *******************************************************************************
 
 === 1.0.26 ===
+* Some optimizations related to memory copies.
 * Updated build scripts and dependencies.
 
 === 1.0.25 ===
